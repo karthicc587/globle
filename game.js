@@ -158,7 +158,14 @@ async function initMap() {
       refreshMap();
     });
 
-  svgSel.call(drag).call(zoom);
+  svgSel.call(drag).call(zoom)
+  .on("click", (event) => {
+    // Only focus if the user clicked the background (SVG), 
+    // not a country (which has its own listener) or UI element.
+    if (event.target.tagName === "svg" || event.target.classList.contains("sphere")) {
+      document.getElementById("country-input").focus();
+    }
+  });
 
   // Auto-rotation timer
   d3.timer(() => {

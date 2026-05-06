@@ -4,32 +4,28 @@
   <meta charset="UTF-8" />
   <title>Globle Clone</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- D3 + TopoJSON -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/topojson-client@3"></script>
-
   <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
   <h1>🌍 Globle Clone</h1>
-
   <div class="container">
     <div class="left-panel">
       <div class="input-wrapper">
-        <input id="country-input" placeholder="Enter a country..." />
+        <input id="country-input" placeholder="Enter a country..." autocomplete="off" />
         <button id="guess-btn">Guess</button>
         <div id="autocomplete-list"></div>
       </div>
 
       <div id="error-msg"></div>
+      
       <div id="win-message">
         <div id="win-text"></div>
         <button id="share-btn">Copy Results 📋</button>
         <button id="play-again-btn">Play Again</button>
       </div>
-     
+
       <h3>Guesses</h3>
       <div id="guess-list"></div>
     </div>

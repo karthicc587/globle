@@ -3,39 +3,26 @@ body {
   margin: 0;
   background: #0f172a;
   color: white;
+  overflow: hidden;
 }
 
-h1 {
-  text-align: center;
-  margin: 10px;
-}
+h1 { text-align: center; margin: 10px; }
 
-.container {
-  display: flex;
-  height: 90vh;
-}
+.container { display: flex; height: 90vh; }
 
 .left-panel {
   width: 300px;
   padding: 15px;
   background: #1e293b;
   overflow-y: auto;
-  z-index: 10; /* Ensures UI stays above the globe */
+  z-index: 10;
 }
 
-.input-wrapper {
-  position: relative;
-}
+.input-wrapper { position: relative; }
 
-input {
-  width: 70%;
-  padding: 8px;
-}
+input { width: 70%; padding: 8px; }
 
-button {
-  padding: 8px;
-  margin-left: 5px;
-}
+button { padding: 8px; cursor: pointer; }
 
 #autocomplete-list {
   position: absolute;
@@ -48,66 +35,26 @@ button {
   z-index: 20;
 }
 
-#autocomplete-list.open {
-  display: block;
-}
+#autocomplete-list.open { display: block; }
 
-.autocomplete-item {
-  padding: 5px;
-  cursor: pointer;
-}
-
-.autocomplete-item:hover,
-.autocomplete-item.active {
-  background: #ddd;
-}
+.autocomplete-item { padding: 5px; cursor: pointer; }
+.autocomplete-item:hover, .autocomplete-item.active { background: #ddd; }
 
 #map-wrapper {
   flex: 1;
   position: relative;
-  overflow: hidden;
-  cursor: grab; /* Indicates the globe can be dragged */
+  cursor: grab;
 }
 
-#map-wrapper:active {
-  cursor: grabbing;
-}
+#map-wrapper:active { cursor: grabbing; }
 
-#map {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-}
+#map { width: 100%; height: 100%; background: transparent; }
 
-/* 3D Globe Elements */
-.sphere {
-  fill: #1e293b; /* The 'Ocean' color */
-  stroke: #334155;
-  stroke-width: 0.5;
-}
-
-.graticule {
-  fill: none;
-  stroke: #475569;
-  stroke-width: 0.2;
-  opacity: 0.5;
-}
-
-.country {
-  fill: #334155;
-  stroke: #0f172a;
-  stroke-width: 0.3;
-}
-
-.country.guessed {
-  stroke: white;
-  stroke-width: 0.8;
-}
-
-.country.target {
-  stroke: gold;
-  stroke-width: 2;
-}
+.sphere { fill: #1e293b; stroke: #334155; stroke-width: 0.5; }
+.graticule { fill: none; stroke: #475569; stroke-width: 0.2; opacity: 0.5; }
+.country { fill: #334155; stroke: #0f172a; stroke-width: 0.3; transition: fill 0.5s; }
+.country.guessed { stroke: white; stroke-width: 0.8; }
+.country.target { stroke: gold; stroke-width: 2; }
 
 #tooltip {
   position: absolute;
@@ -115,32 +62,12 @@ button {
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 12px;
-  pointer-events: none; /* Prevents tooltip from blocking drag/hover */
+  pointer-events: none;
   display: none;
   z-index: 100;
 }
 
-#tooltip.visible {
-  display: block;
-}
-
-.guess-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 8px 0;
-  padding: 5px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-}
-
-.g-swatch {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid white;
-}
+#tooltip.visible { display: block; }
 
 #win-message {
   display: none;
@@ -151,34 +78,27 @@ button {
   text-align: center;
 }
 
-#error-msg {
-  color: #fb7185;
-  font-size: 14px;
-  margin-top: 5px;
-}
-
 #play-again-btn, #share-btn {
   background: white;
-  color: #059669; /* Matches the green win background */
+  color: #059669;
   border: none;
   padding: 10px;
   border-radius: 4px;
   font-weight: bold;
-  cursor: pointer;
   margin-top: 10px;
   width: 100%;
-  transition: background 0.2s;
 }
 
-#play-again-btn:hover, #share-btn:hover {
-  background: #e2e8f0;
+#share-btn { background: #1e293b; color: white; }
+
+.guess-item {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-#share-btn {
-  background: #1e293b; /* Darker blue for contrast */
-  color: white;
-}
+.g-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid white; }
 
-#share-btn:hover {
-  background: #334155;
-}
+#error-msg { color: #fb7185; font-size: 14px; margin: 5px 0; }

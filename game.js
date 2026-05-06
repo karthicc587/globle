@@ -285,11 +285,36 @@ function submitGuess() {
     document.getElementById("win-message").style.display = "block";
     document.getElementById("win-text").innerHTML = `🎉 Correct! <br><strong>${target.name}</strong><br>in ${guesses.length} guesses!`;
     input.disabled = true;
+    document.getElementById("guess-btn").disabled = true;
+    document.getElementById("give-up-btn").disabled = true;
     d3.transition().duration(1500).tween("rotate", () => {
       const r = d3.interpolate(projection.rotate(), [-target.lng, -target.lat]);
       return (t) => { projection.rotate(r(t)); refreshMap(); };
     });
   }
+}
+
+function giveUp() {
+  const target = COUNTRY_DATA[TARGET_ISO3];
+  won = true;
+  rotationActive = false;
+  recordGameResult(target.name, guesses.length, false);
+  
+  document.getElementById("win-message").style.display = "block";
+  document.getElementById("win-text").innerHTML = `😢 Game Over<br><strong>${target.name}</strong><br>Guesses: ${guesses.length}`;
+  
+  const input = document.getElementById("country-input");
+  input.disabled = true;
+  document.getElementById("guess-btn").disabled = true;
+  document.getElementById("give-up-btn").disabled = true;
+  
+  gSel.selectAll(".country").filter(d => d.iso3 === TARGET_ISO3)
+    .classed("target", true).transition().duration(500).style("fill", "#fbbf24");
+  
+  d3.transition().duration(1500).tween("rotate", () => {
+    const r = d3.interpolate(projection.rotate(), [-target.lng, -target.lat]);
+    return (t) => { projection.rotate(r(t)); refreshMap(); };
+  });
 }
 
 function renderGuesses() {
@@ -311,6 +336,7 @@ function resetGame() {
   const input = document.getElementById("country-input");
   input.disabled = false; input.value = "";
   document.getElementById("guess-btn").disabled = false;
+  document.getElementById("give-up-btn").disabled = false;
   gSel.selectAll(".country").classed("guessed", false).classed("target", false).style("fill", null);
   refreshMap();
   input.focus();
@@ -346,6 +372,7 @@ function setupEvents() {
   });
   input.addEventListener("keydown", (e) => { if(e.key === "Enter") submitGuess(); });
   document.getElementById("guess-btn").onclick = submitGuess;
+  document.getElementById("give-up-btn").onclick = giveUp;
   document.getElementById("play-again-btn").onclick = resetGame;
   document.getElementById("share-btn").onclick = shareResults;
   

@@ -1,3 +1,4 @@
+/* General Layout & Background */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -6,8 +7,12 @@ body {
   overflow: hidden;
 }
 
-h1 { text-align: center; margin: 10px; }
+h1 { 
+  text-align: center; 
+  margin: 10px; 
+}
 
+/* Stats Display Section */
 .stats-display {
   background: #1e293b;
   padding: 12px;
@@ -29,14 +34,14 @@ h1 { text-align: center; margin: 10px; }
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   color: #10b981;
   margin-top: 4px;
@@ -56,23 +61,39 @@ h1 { text-align: center; margin: 10px; }
   z-index: 5;
 }
 
-.reset-stats-btn:hover {
-  background: #475569;
+.reset-stats-btn:hover { background: #475569; }
+
+/* Flex Container for Panels */
+.container { 
+  display: flex; 
+  height: calc(100vh - 120px); 
 }
 
-.container { display: flex; height: calc(90vh - 100px); }
-
+/* Left Panel Sidebar */
 .left-panel {
-  width: 300px;
+  width: 320px;
   padding: 15px;
   background: #1e293b;
   overflow-y: auto;
   z-index: 10;
+  display: flex;         /* Added to support footer positioning */
+  flex-direction: column; /* Vertical stack */
 }
 
-.input-wrapper { position: relative; }
+/* Input Area */
+.input-wrapper { 
+  position: relative; 
+  margin-bottom: 15px;
+}
 
-input { width: 60%; padding: 8px; }
+input { 
+  width: 65%; 
+  padding: 10px; 
+  border-radius: 4px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: white;
+}
 
 button { padding: 8px; cursor: pointer; }
 
@@ -82,7 +103,6 @@ button { padding: 8px; cursor: pointer; }
   border: none;
   border-radius: 4px;
   font-weight: bold;
-  cursor: pointer;
   margin-left: 4px;
 }
 
@@ -96,72 +116,46 @@ button { padding: 8px; cursor: pointer; }
   border: none;
   border-radius: 4px;
   font-weight: bold;
-  padding: 8px 12px;
+  padding: 10px;
   margin-top: 8px;
   width: 100%;
-  cursor: pointer;
 }
 
-.give-up-btn:hover { background: #dc2626; }
-.give-up-btn:disabled { background: #6b7280; cursor: not-allowed; }
-
+/* Autocomplete Menu */
 #autocomplete-list {
   position: absolute;
   background: white;
   color: black;
   width: 100%;
   display: none;
-  max-height: 150px;
+  max-height: 200px;
   overflow-y: auto;
   z-index: 20;
+  border-radius: 4px;
+  margin-top: 2px;
 }
 
 #autocomplete-list.open { display: block; }
 
-.autocomplete-item { padding: 5px; cursor: pointer; }
-.autocomplete-item:hover, .autocomplete-item.active { background: #ddd; }
+.autocomplete-item { padding: 8px; cursor: pointer; }
+.autocomplete-item:hover { background: #e2e8f0; }
 
-#map-wrapper {
-  flex: 1;
-  position: relative;
-  cursor: grab;
-}
-
-#map-wrapper:active { cursor: grabbing; }
-
-#map { width: 100%; height: 100%; background: transparent; }
-
-.sphere { fill: #1e293b; stroke: #334155; stroke-width: 0.5; }
-.graticule { fill: none; stroke: #475569; stroke-width: 0.2; opacity: 0.5; }
-.country { fill: #334155; stroke: #0f172a; stroke-width: 0.3; transition: fill 0.5s; }
-.country.guessed { stroke: white; stroke-width: 0.8; }
-.country.target { stroke: gold; stroke-width: 2; fill: #fbbf24; }
-
-#tooltip {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.8);
-  padding: 5px 10px;
-  border-radius: 4px;
-  font-size: 12px;
-  pointer-events: none;
-  display: none;
-  z-index: 100;
-}
-
-#tooltip.visible { display: block; }
-
+/* Win Message & Emoji Grid */
 #win-message {
   display: none;
-  background: #059669;
-  padding: 15px;
-  margin: 10px 0;
+  background: #065f46;
+  padding: 20px;
+  margin: 15px 0;
   border-radius: 8px;
   text-align: center;
+  border: 2px solid #10b981;
+}
+
+#win-text {
+  line-height: 1.6;
 }
 
 #play-again-btn, #share-btn {
-  background: white;
-  color: #059669;
   border: none;
   padding: 10px;
   border-radius: 4px;
@@ -170,16 +164,80 @@ button { padding: 8px; cursor: pointer; }
   width: 100%;
 }
 
-#share-btn { background: #1e293b; color: white; }
+#play-again-btn { background: #10b981; color: white; }
+#share-btn { background: #334155; color: white; }
 
+/* Guess List */
 .guess-item {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin: 8px 0;
-  padding: 5px;
+  margin: 6px 0;
+  padding: 8px;
   background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-.g-swatch { width: 12px; height: 12px; border-radius: 50%; border: 1px solid white; }
+.g-swatch { 
+  width: 14px; 
+  height: 14px; 
+  border-radius: 50%; 
+  border: 1px solid white; 
+}
 
+/* Map Section */
+#map-wrapper {
+  flex: 1;
+  position: relative;
+  cursor: grab;
+  background: #0f172a;
+}
+
+#map-wrapper:active { cursor: grabbing; }
+
+#map { width: 100%; height: 100%; }
+
+.sphere { fill: #1e293b; stroke: #334155; stroke-width: 0.5; }
+.graticule { fill: none; stroke: #475569; stroke-width: 0.2; opacity: 0.5; }
+.country { fill: #334155; stroke: #0f172a; stroke-width: 0.3; transition: fill 0.5s; }
+.country.guessed { stroke: white; stroke-width: 1; }
+.country.target { stroke: #fbbf24; stroke-width: 2.5; fill: #fbbf24; }
+
+/* Sticky Compass Footer */
+.setting-item {
+  margin-top: auto; /* Pushes to bottom */
+  padding: 15px 10px;
+  border-top: 1px solid #334155;
+  background: #1e293b;
+  position: sticky;
+  bottom: 0;
+z-index: 20;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.setting-item label {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+white-space: nowrap;
+justify-content: flex-start;
+}
+
+/* Tooltip */
+#tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  display: none;
+  z-index: 100;
+  border: 1px solid #475569;
+}
+
+#tooltip.visible { display: block; }
 #error-msg { color: #fb7185; font-size: 14px; margin: 5px 0; }

@@ -164,15 +164,19 @@ function haversine(lat1, lon1, lat2, lon2) {
 function distToColor(dist) {
   if (dist === 0) return "#c0392b"; 
   const t = Math.min(dist / 20000, 1); 
-  const stops = [
-    { p: 0.00, r: 192, g: 57,  b: 43  }, 
-    { p: 0.10, r: 232, g: 96,  b: 26  }, 
-    { p: 0.25, r: 212, g: 160, b: 23  }, 
-    { p: 0.45, r: 74,  g: 139, b: 111 }, 
-    { p: 0.65, r: 27,  g: 94,  b: 138 }, 
-    { p: 0.82, r: 25,  g: 55,  b: 95  }, 
-    { p: 1.00, r: 20,  g: 25,  b: 50  }
+
+
+const stops = [
+    { p: 0.00, r: 255, g: 0,   b: 0   }, // 0 km: Bright Red (Correct)
+    { p: 0.05, r: 255, g: 69,  b: 0   }, // ~1,000 km: Red-Orange
+    { p: 0.12, r: 255, g: 140, b: 0   }, // ~2,400 km: Dark Orange
+    { p: 0.25, r: 255, g: 215, b: 0   }, // ~5,000 km: Gold/Yellow (Warm)
+    { p: 0.45, r: 74,  g: 144, b: 226 }, // ~9,000 km: Sky Blue (Cooling)
+    { p: 0.70, r: 27,  g: 94,  b: 138 }, // ~14,000 km: Steel Blue
+    { p: 1.00, r: 20,  g: 25,  b: 50  }  // 20,000 km: Deep Navy (Freezing)
   ];
+
+
   let lo = stops[0], hi = stops[stops.length-1];
   for (let i=0; i<stops.length-1; i++) {
     if (t >= stops[i].p && t <= stops[i+1].p) { lo = stops[i]; hi = stops[i+1]; break; }
@@ -267,10 +271,10 @@ function submitGuess() {
   const target = COUNTRY_DATA[TARGET_ISO3];
   const guessed = COUNTRY_DATA[iso3];
   const dist = haversine(guessed.lat, guessed.lng, target.lat, target.lng);
-  
+  const arrow = getBearingArrow(guessed.lat, guessed.lng, target.lat, target.lng);
+
   guessedSet.add(iso3);
-  guesses.push({ iso3, name: guessed.name, dist, color: distToColor(dist) });
-  
+guesses.push({ iso3, name: guessed.name, dist, color: distToColor(dist), arrow });  
   gSel.selectAll(".country").filter(d => d.iso3 === iso3)
     .classed("guessed", true).transition().duration(500).style("fill", distToColor(dist));
 
@@ -329,11 +333,23 @@ function giveUp() {
 
 function renderGuesses() {
   const list = document.getElementById("guess-list");
+  // 1. Grab the toggle state
+  const showCompass = document.getElementById("compass-toggle").checked; 
+  
   list.innerHTML = "";
   [...guesses].sort((a, b) => a.dist - b.dist).forEach((g, i) => {
     const item = document.createElement("div");
     item.className = "guess-item";
-    item.innerHTML = `<span>#${i+1}</span><span>${g.name}</span><span>${Math.round(g.dist/10)*10} km</span><span class="g-swatch" style="background:${g.color}"></span>`;
+    
+    // 2. Create the arrow string only if the toggle is on and it's not the target
+    const arrowHtml = (showCompass && g.dist !== 0) ? `<span style="margin-right:8px">${g.arrow}</span>` : "";
+
+    item.innerHTML = `
+      <span>#${i+1}</span>
+      <span>${g.name}</span>
+      <span>${arrowHtml}${Math.round(g.dist/10)*10} km</span>
+      <span class="g-swatch" style="background:${g.color}"></span>
+    `;
     list.appendChild(item);
   });
 }
@@ -365,12 +381,37 @@ const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");
 }
 
 function getEmojiFromDistance(dist) {
-  if (dist === 0) return "🟥";      // Correct!
-  if (dist < 1000) return "🟧";    // Very Close
-  if (dist < 3000) return "🟨";    // Close
-  if (dist < 7000) return "🟩";    // Getting there
-  if (dist < 12000) return "🟦";   // Far
-  return "⬛";                     // Very Far
+  if (dist === 0) return "🟥";      // 0 km: Bright Red (Match stop 1)
+  if (dist < 1000) return "🔴";    // <1k km: Red Circle (Match stop 2)
+  if (dist < 2400) return "🟧";    // <2.4k km: Orange Square (Match stop 3)
+  if (dist < 5000) return "🟨";    // <5k km: Yellow Square (Match stop 4)
+  if (dist < 9000) return "🔵";    // <9k km: Blue Circle (Match stop 5)
+  if (dist < 14000) return "🟦";   // <14k km: Blue Square (Match stop 6)
+  return "⬛";                     // >14k km: Black Square (Match stop 7)
+}
+
+function getBearingArrow(lat1, lon1, lat2, lon2) {
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) -
+            Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  
+  let θ = Math.atan2(y, x) * 180 / Math.PI;
+  const bearing = (θ + 360) % 360; // Normalize to 0-360
+
+  // Map bearing to 8-point compass arrows
+  if (bearing >= 337.5 || bearing < 22.5) return "⬆️";
+  if (bearing >= 22.5 && bearing < 67.5) return "↗️";
+  if (bearing >= 67.5 && bearing < 112.5) return "➡️";
+  if (bearing >= 112.5 && bearing < 157.5) return "↘️";
+  if (bearing >= 157.5 && bearing < 202.5) return "⬇️";
+  if (bearing >= 202.5 && bearing < 247.5) return "↙️";
+  if (bearing >= 247.5 && bearing < 292.5) return "⬅️";
+  if (bearing >= 292.5 && bearing < 337.5) return "↖️";
+  return "➡️";
 }
 
 function setupEvents() {
@@ -396,7 +437,8 @@ function setupEvents() {
   document.getElementById("give-up-btn").onclick = giveUp;
   document.getElementById("play-again-btn").onclick = resetGame;
   document.getElementById("share-btn").onclick = shareResults;
-  
+  document.getElementById("compass-toggle").addEventListener("change", renderGuesses);
+
   const resetBtn = document.getElementById("reset-stats-btn");
   if (resetBtn) resetBtn.onclick = clearStats;
 }

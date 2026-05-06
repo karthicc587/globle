@@ -8,7 +8,7 @@ function getRandomCountry() {
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
-const TARGET_ISO3 = getRandomCountry(); 
+let TARGET_ISO3 = getRandomCountry(); 
 
 // TopoJSON world atlas URL
 const WORLD_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -53,7 +53,7 @@ let activeAutoIdx = -1;
 
 let rotationActive = true;
 let resumeTimer = null;
-const ROTATION_RESUME_DELAY = 5000; // 5 seconds inactivity before spinning
+const ROTATION_RESUME_DELAY = 10000; // 5 seconds inactivity before spinning
 const INITIAL_SCALE_FACTOR = 2.2;
 
 // ─── Utility Functions ────────────────────────────────────────────────────
@@ -317,6 +317,8 @@ function setupEvents() {
       listEl.classList.remove("open");
     }
   });
+  
+  document.getElementById("play-again-btn").onclick = resetGame;
 }
 
 (async () => {
@@ -324,3 +326,38 @@ function setupEvents() {
   setupEvents();
   document.getElementById("country-input").focus();
 })();
+
+function resetGame() {
+  // 1. Pick a new target
+  const keys = Object.keys(COUNTRY_DATA);
+  const newTarget = keys[Math.floor(Math.random() * keys.length)];
+  
+  // 2. Reset State
+  guesses = [];
+  guessedSet.clear();
+  won = false;
+  rotationActive = true;
+  
+  // Update the global target variable (remove 'const' from original declaration if needed)
+  // Note: For this to work, ensure 'let TARGET_ISO3' is used at the top of game.js
+  window.TARGET_ISO3 = newTarget; 
+
+  // 3. Reset UI
+  document.getElementById("win-message").style.display = "none";
+  document.getElementById("guess-list").innerHTML = "";
+  document.getElementById("error-msg").textContent = "";
+  
+  const input = document.getElementById("country-input");
+  input.disabled = false;
+  input.value = "";
+  document.getElementById("guess-btn").disabled = false;
+
+  // 4. Reset Map Visuals
+  gSel.selectAll(".country")
+    .classed("guessed", false)
+    .classed("target", false)
+    .style("fill", null);
+    
+  refreshMap();
+  input.focus();
+}

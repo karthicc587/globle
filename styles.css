@@ -156,3 +156,29 @@ button {
   font-size: 14px;
   margin-top: 5px;
 }
+
+#play-again-btn, #share-btn {
+  background: white;
+  color: #059669; /* Matches the green win background */
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+#play-again-btn:hover, #share-btn:hover {
+  background: #e2e8f0;
+}
+
+#share-btn {
+  background: #1e293b; /* Darker blue for contrast */
+  color: white;
+}
+
+#share-btn:hover {
+  background: #334155;
+}

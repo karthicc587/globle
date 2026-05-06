@@ -282,8 +282,18 @@ function submitGuess() {
     won = true;
     rotationActive = false;
     recordGameResult(target.name, guesses.length, true);
+
+
+const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");
     document.getElementById("win-message").style.display = "block";
-    document.getElementById("win-text").innerHTML = `🎉 Correct! <br><strong>${target.name}</strong><br>in ${guesses.length} guesses!`;
+
+document.getElementById("win-text").innerHTML = `
+      🎉 Correct! <br>
+      <strong>${target.name}</strong><br>
+      in ${guesses.length} guesses!<br>
+      <div style="margin-top:10px; letter-spacing: 2px;">${emojiGrid}</div>
+    `;
+
     input.disabled = true;
     document.getElementById("guess-btn").disabled = true;
     document.getElementById("give-up-btn").disabled = true;
@@ -344,12 +354,23 @@ function resetGame() {
 
 function shareResults() {
   const target = COUNTRY_DATA[TARGET_ISO3].name;
-  const text = `🌍 Globle Clone\nTarget: ${target}\nSolved in ${guesses.length} guesses!\n${window.location.href}`;
+const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");  
+  const text = `🌍 Globle Clone\nTarget: ${target}\nSolved in ${guesses.length} guesses!\n${emojiGrid}\n\n${window.location.href}`;
+  
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById("share-btn");
     btn.textContent = "Copied!";
     setTimeout(() => { btn.textContent = "Copy Results 📋"; }, 2000);
   });
+}
+
+function getEmojiFromDistance(dist) {
+  if (dist === 0) return "🟥";      // Correct!
+  if (dist < 1000) return "🟧";    // Very Close
+  if (dist < 3000) return "🟨";    // Close
+  if (dist < 7000) return "🟩";    // Getting there
+  if (dist < 12000) return "🟦";   // Far
+  return "⬛";                     // Very Far
 }
 
 function setupEvents() {

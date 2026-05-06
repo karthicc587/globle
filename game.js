@@ -43,6 +43,109 @@ let resumeTimer = null;
 const ROTATION_RESUME_DELAY = 5000;
 const INITIAL_SCALE_FACTOR = 2.2;
 
+// ─── Progress Tracking ──────────────────────────────────────────────────────
+
+const STORAGE_KEY = "globle_stats";
+
+function initializeStats() {
+  if (!localStorage.getItem(STORAGE_KEY)) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      totalGames: 0,
+      wins: 0,
+      losses: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+      totalGuesses: 0,
+      bestGuessCount: Infinity,
+      lastPlayDate: null,
+      gameHistory: []
+    }));
+  }
+}
+
+function getStats() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+}
+
+function saveStats(stats) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+}
+
+function recordGameResult(targetCountry, guessCount, won) {
+  const stats = getStats();
+  const today = new Date().toISOString().split('T')[0];
+  
+  stats.totalGames++;
+  stats.totalGuesses += guessCount;
+  
+  if (won) {
+    stats.wins++;
+    stats.currentStreak++;
+    if (stats.currentStreak > stats.maxStreak) {
+      stats.maxStreak = stats.currentStreak;
+    }
+    if (guessCount < stats.bestGuessCount) {
+      stats.bestGuessCount = guessCount;
+    }
+  } else {
+    stats.losses++;
+    stats.currentStreak = 0;
+  }
+  
+  stats.lastPlayDate = today;
+  stats.gameHistory.push({
+    date: today,
+    country: targetCountry,
+    guessCount: guessCount,
+    won: won
+  });
+  
+  saveStats(stats);
+  updateStatsDisplay();
+}
+
+function updateStatsDisplay() {
+  const stats = getStats();
+  const winRate = stats.totalGames > 0 ? Math.round((stats.wins / stats.totalGames) * 100) : 0;
+  const avgGuesses = stats.wins > 0 ? Math.round(stats.totalGuesses / stats.wins * 10) / 10 : 0;
+  
+  const statsDisplay = document.getElementById("stats-display");
+  if (statsDisplay) {
+    statsDisplay.innerHTML = `
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-label">Games</div>
+          <div class="stat-value">${stats.totalGames}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Win Rate</div>
+          <div class="stat-value">${winRate}%</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Streak</div>
+          <div class="stat-value">${stats.currentStreak}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Best Streak</div>
+          <div class="stat-value">${stats.maxStreak}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Avg Guesses</div>
+          <div class="stat-value">${avgGuesses}</div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function clearStats() {
+  if (confirm("Are you sure you want to reset all progress? This cannot be undone.")) {
+    localStorage.removeItem(STORAGE_KEY);
+    initializeStats();
+    updateStatsDisplay();
+  }
+}
+
 // ─── Utility Functions ─────────────────────────────────────────────────────
 
 function getRandomCountry() {
@@ -177,6 +280,7 @@ function submitGuess() {
 
   if (iso3 === TARGET_ISO3) {
     won = true; rotationActive = false;
+    recordGameResult(target.name, guesses.length, true);
     document.getElementById("win-message").style.display = "block";
     document.getElementById("win-text").innerHTML = `🎉 Correct! <br><strong>${target.name}</strong><br>in ${guesses.length} guesses!`;
     input.disabled = true;
@@ -243,9 +347,14 @@ function setupEvents() {
   document.getElementById("guess-btn").onclick = submitGuess;
   document.getElementById("play-again-btn").onclick = resetGame;
   document.getElementById("share-btn").onclick = shareResults;
+  
+  const resetBtn = document.getElementById("reset-stats-btn");
+  if (resetBtn) resetBtn.onclick = clearStats;
 }
 
 (async () => {
+  initializeStats();
+  updateStatsDisplay();
   TARGET_ISO3 = getRandomCountry();
   await initMap();
   setupEvents();

@@ -55,7 +55,7 @@ function initializeStats() {
       losses: 0,
       currentStreak: 0,
       maxStreak: 0,
-      totalGuesses: 0,
+      totalWinGuesses: 0,
       bestGuessCount: Infinity,
       lastPlayDate: null,
       gameHistory: []
@@ -71,15 +71,15 @@ function saveStats(stats) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
 }
 
-function recordGameResult(targetCountry, guessCount, won) {
+function recordGameResult(targetCountry, guessCount, isWin) {
   const stats = getStats();
   const today = new Date().toISOString().split('T')[0];
   
   stats.totalGames++;
-  stats.totalGuesses += guessCount;
   
-  if (won) {
+  if (isWin) {
     stats.wins++;
+    stats.totalWinGuesses += guessCount;
     stats.currentStreak++;
     if (stats.currentStreak > stats.maxStreak) {
       stats.maxStreak = stats.currentStreak;
@@ -97,7 +97,7 @@ function recordGameResult(targetCountry, guessCount, won) {
     date: today,
     country: targetCountry,
     guessCount: guessCount,
-    won: won
+    won: isWin
   });
   
   saveStats(stats);
@@ -107,7 +107,7 @@ function recordGameResult(targetCountry, guessCount, won) {
 function updateStatsDisplay() {
   const stats = getStats();
   const winRate = stats.totalGames > 0 ? Math.round((stats.wins / stats.totalGames) * 100) : 0;
-  const avgGuesses = stats.wins > 0 ? Math.round(stats.totalGuesses / stats.wins * 10) / 10 : 0;
+  const avgGuesses = stats.wins > 0 ? Math.round(stats.totalWinGuesses / stats.wins * 10) / 10 : 0;
   
   const statsDisplay = document.getElementById("stats-display");
   if (statsDisplay) {
@@ -279,7 +279,8 @@ function submitGuess() {
   document.getElementById("autocomplete-list").classList.remove("open");
 
   if (iso3 === TARGET_ISO3) {
-    won = true; rotationActive = false;
+    won = true;
+    rotationActive = false;
     recordGameResult(target.name, guesses.length, true);
     document.getElementById("win-message").style.display = "block";
     document.getElementById("win-text").innerHTML = `🎉 Correct! <br><strong>${target.name}</strong><br>in ${guesses.length} guesses!`;

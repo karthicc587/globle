@@ -202,6 +202,7 @@ async function initMap() {
         document.getElementById("country-input").value = country.name;
         submitGuess();
         stopRotationWithResume();
+        document.getElementById("country-input").focus();
       }
     });
 }

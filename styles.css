@@ -1,0 +1,158 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #0f172a;
+  color: white;
+}
+
+h1 {
+  text-align: center;
+  margin: 10px;
+}
+
+.container {
+  display: flex;
+  height: 90vh;
+}
+
+.left-panel {
+  width: 300px;
+  padding: 15px;
+  background: #1e293b;
+  overflow-y: auto;
+  z-index: 10; /* Ensures UI stays above the globe */
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+input {
+  width: 70%;
+  padding: 8px;
+}
+
+button {
+  padding: 8px;
+  margin-left: 5px;
+}
+
+#autocomplete-list {
+  position: absolute;
+  background: white;
+  color: black;
+  width: 100%;
+  display: none;
+  max-height: 150px;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+#autocomplete-list.open {
+  display: block;
+}
+
+.autocomplete-item {
+  padding: 5px;
+  cursor: pointer;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background: #ddd;
+}
+
+#map-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab; /* Indicates the globe can be dragged */
+}
+
+#map-wrapper:active {
+  cursor: grabbing;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+/* 3D Globe Elements */
+.sphere {
+  fill: #1e293b; /* The 'Ocean' color */
+  stroke: #334155;
+  stroke-width: 0.5;
+}
+
+.graticule {
+  fill: none;
+  stroke: #475569;
+  stroke-width: 0.2;
+  opacity: 0.5;
+}
+
+.country {
+  fill: #334155;
+  stroke: #0f172a;
+  stroke-width: 0.3;
+}
+
+.country.guessed {
+  stroke: white;
+  stroke-width: 0.8;
+}
+
+.country.target {
+  stroke: gold;
+  stroke-width: 2;
+}
+
+#tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none; /* Prevents tooltip from blocking drag/hover */
+  display: none;
+  z-index: 100;
+}
+
+#tooltip.visible {
+  display: block;
+}
+
+.guess-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px 0;
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.g-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid white;
+}
+
+#win-message {
+  display: none;
+  background: #059669;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 8px;
+  text-align: center;
+}
+
+#error-msg {
+  color: #fb7185;
+  font-size: 14px;
+  margin-top: 5px;
+}

@@ -268,6 +268,7 @@ function submitGuess() {
     won = true;
     rotationActive = false;
     const winEl = document.getElementById("win-message");
+    const winText = document.getElementById("win-text");
     winEl.style.display = "block";
     winEl.innerHTML = `🎉 Correct! <br><strong>${target.name}</strong><br>in ${guesses.length} guesses!`;
     input.disabled = true;
@@ -319,6 +320,7 @@ function setupEvents() {
   });
   
   document.getElementById("play-again-btn").onclick = resetGame;
+  document.getElementById("share-btn").onclick = shareResults;
 }
 
 (async () => {
@@ -360,4 +362,20 @@ function resetGame() {
     
   refreshMap();
   input.focus();
+}
+
+function shareResults() {
+  const target = COUNTRY_DATA[window.TARGET_ISO3].name;
+  const count = guesses.length;
+  
+  // Create a fun emoji string based on guesses
+  // Blue for far, Orange for medium, Red for close
+  const shareText = `🌍 Globle Clone\nTarget: ${target}\nSolved in ${count} guesses!\nhttps://${window.location.hostname}${window.location.pathname}`;
+  
+  navigator.clipboard.writeText(shareText).then(() => {
+    const btn = document.getElementById("share-btn");
+    const originalText = btn.textContent;
+    btn.textContent = "Copied to Clipboard!";
+    setTimeout(() => btn.textContent = originalText, 2000);
+  });
 }

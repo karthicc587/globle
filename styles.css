@@ -224,6 +224,11 @@ z-index: 20;
   gap: 8px;
 white-space: nowrap;
 justify-content: flex-start;
+margin-bottom: 8px;
+}
+
+.setting-item label:last-child {
+  margin-bottom: 0;
 }
 
 /* Tooltip */

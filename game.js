@@ -165,17 +165,15 @@ function distToColor(dist) {
   if (dist === 0) return "#c0392b"; 
   const t = Math.min(dist / 20000, 1); 
 
-
-const stops = [
-    { p: 0.00, r: 255, g: 0,   b: 0   }, // 0 km: Bright Red (Correct)
-    { p: 0.05, r: 255, g: 69,  b: 0   }, // ~1,000 km: Red-Orange
-    { p: 0.12, r: 255, g: 140, b: 0   }, // ~2,400 km: Dark Orange
-    { p: 0.25, r: 255, g: 215, b: 0   }, // ~5,000 km: Gold/Yellow (Warm)
-    { p: 0.45, r: 74,  g: 144, b: 226 }, // ~9,000 km: Sky Blue (Cooling)
-    { p: 0.70, r: 27,  g: 94,  b: 138 }, // ~14,000 km: Steel Blue
-    { p: 1.00, r: 20,  g: 25,  b: 50  }  // 20,000 km: Deep Navy (Freezing)
+  const stops = [
+    { p: 0.00, r: 255, g: 0,   b: 0   }, 
+    { p: 0.05, r: 255, g: 69,  b: 0   }, 
+    { p: 0.12, r: 255, g: 140, b: 0   }, 
+    { p: 0.25, r: 255, g: 215, b: 0   }, 
+    { p: 0.45, r: 74,  g: 144, b: 226 }, 
+    { p: 0.70, r: 27,  g: 94,  b: 138 }, 
+    { p: 1.00, r: 20,  g: 25,  b: 50  }  
   ];
-
 
   let lo = stops[0], hi = stops[stops.length-1];
   for (let i=0; i<stops.length-1; i++) {
@@ -247,6 +245,14 @@ async function initMap() {
   gSel.selectAll(".country").data(geoFeatures).join("path").attr("class", "country").attr("d", pathFn)
     .on("mousemove", (event, d) => {
       if (!d.iso3) return;
+
+      // Check if tooltip toggle is enabled
+      const showTooltip = document.getElementById("tooltip-toggle").checked;
+      if (!showTooltip) {
+        tooltip.classList.remove("visible");
+        return;
+      }
+
       const rect = wrapper.getBoundingClientRect();
       const g = guesses.find(item => item.iso3 === d.iso3);
       tooltip.textContent = g ? `${COUNTRY_DATA[d.iso3].name} — ${Math.round(g.dist/10)*10} km` : COUNTRY_DATA[d.iso3]?.name || d.iso3;
@@ -274,7 +280,7 @@ function submitGuess() {
   const arrow = getBearingArrow(guessed.lat, guessed.lng, target.lat, target.lng);
 
   guessedSet.add(iso3);
-guesses.push({ iso3, name: guessed.name, dist, color: distToColor(dist), arrow });  
+  guesses.push({ iso3, name: guessed.name, dist, color: distToColor(dist), arrow });  
   gSel.selectAll(".country").filter(d => d.iso3 === iso3)
     .classed("guessed", true).transition().duration(500).style("fill", distToColor(dist));
 
@@ -287,11 +293,10 @@ guesses.push({ iso3, name: guessed.name, dist, color: distToColor(dist), arrow }
     rotationActive = false;
     recordGameResult(target.name, guesses.length, true);
 
-
-const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");
+    const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");
     document.getElementById("win-message").style.display = "block";
 
-document.getElementById("win-text").innerHTML = `
+    document.getElementById("win-text").innerHTML = `
       🎉 Correct! <br>
       <strong>${target.name}</strong><br>
       in ${guesses.length} guesses!<br>
@@ -333,7 +338,6 @@ function giveUp() {
 
 function renderGuesses() {
   const list = document.getElementById("guess-list");
-  // 1. Grab the toggle state
   const showCompass = document.getElementById("compass-toggle").checked; 
   
   list.innerHTML = "";
@@ -341,7 +345,6 @@ function renderGuesses() {
     const item = document.createElement("div");
     item.className = "guess-item";
     
-    // 2. Create the arrow string only if the toggle is on and it's not the target
     const arrowHtml = (showCompass && g.dist !== 0) ? `<span style="margin-right:8px">${g.arrow}</span>` : "";
 
     item.innerHTML = `
@@ -370,7 +373,7 @@ function resetGame() {
 
 function shareResults() {
   const target = COUNTRY_DATA[TARGET_ISO3].name;
-const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");  
+  const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");  
   const text = `🌍 Globle Clone\nTarget: ${target}\nSolved in ${guesses.length} guesses!\n${emojiGrid}\n\n${window.location.href}`;
   
   navigator.clipboard.writeText(text).then(() => {
@@ -381,13 +384,13 @@ const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");
 }
 
 function getEmojiFromDistance(dist) {
-  if (dist === 0) return "🟥";      // 0 km: Bright Red (Match stop 1)
-  if (dist < 1000) return "🔴";    // <1k km: Red Circle (Match stop 2)
-  if (dist < 2400) return "🟧";    // <2.4k km: Orange Square (Match stop 3)
-  if (dist < 5000) return "🟨";    // <5k km: Yellow Square (Match stop 4)
-  if (dist < 9000) return "🔵";    // <9k km: Blue Circle (Match stop 5)
-  if (dist < 14000) return "🟦";   // <14k km: Blue Square (Match stop 6)
-  return "⬛";                     // >14k km: Black Square (Match stop 7)
+  if (dist === 0) return "🟥";      
+  if (dist < 1000) return "🔴";    
+  if (dist < 2400) return "🟧";    
+  if (dist < 5000) return "🟨";    
+  if (dist < 9000) return "🔵";    
+  if (dist < 14000) return "🟦";   
+  return "⬛";                     
 }
 
 function getBearingArrow(lat1, lon1, lat2, lon2) {
@@ -400,9 +403,8 @@ function getBearingArrow(lat1, lon1, lat2, lon2) {
             Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
   
   let θ = Math.atan2(y, x) * 180 / Math.PI;
-  const bearing = (θ + 360) % 360; // Normalize to 0-360
+  const bearing = (θ + 360) % 360; 
 
-  // Map bearing to 8-point compass arrows
   if (bearing >= 337.5 || bearing < 22.5) return "⬆️";
   if (bearing >= 22.5 && bearing < 67.5) return "↗️";
   if (bearing >= 67.5 && bearing < 112.5) return "➡️";
@@ -438,6 +440,13 @@ function setupEvents() {
   document.getElementById("play-again-btn").onclick = resetGame;
   document.getElementById("share-btn").onclick = shareResults;
   document.getElementById("compass-toggle").addEventListener("change", renderGuesses);
+
+  // Tooltip toggle cleanup listener
+  document.getElementById("tooltip-toggle").addEventListener("change", (e) => {
+    if (!e.target.checked) {
+      document.getElementById("tooltip").classList.remove("visible");
+    }
+  });
 
   const resetBtn = document.getElementById("reset-stats-btn");
   if (resetBtn) resetBtn.onclick = clearStats;

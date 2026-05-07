@@ -95,10 +95,16 @@ function setupSharedUIEvents() {
   };
   document.getElementById("share-btn").onclick = () => {
     if (getMultiplayerEnabled()) {
-      shareMultiplayerResults();
+      shareMultiplayerResults(); // Handled in multiplayer-mode.js
       return;
     }
-    if (getActiveMode() === "globle") shareResults();
+    
+    const mode = getActiveMode();
+    if (mode === "path") {
+      sharePathResults(); 
+    } else {
+      shareGlobleResults();
+    }
   };
   
   document.getElementById("reset-stats-btn").onclick = clearStats;
@@ -226,4 +232,51 @@ function clearStats() {
     localStorage.removeItem(STORAGE_KEY);
     location.reload();
   }
+}
+
+/**
+ * Generic clipboard helper
+ */
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    // You can trigger a small UI notification here
+    alert("Results copied to clipboard!"); 
+  } catch (err) {
+    console.error("Failed to copy: ", err);
+  }
+}
+
+/**
+ * Share logic for Classic Globle Mode
+ */
+function shareGlobleResults() {
+  // 'guesses' and 'TARGET_ISO3' are global in globle-mode.js
+  const countryName = COUNTRY_DATA[TARGET_ISO3].name;
+  const emojiGrid = guesses.map(g => getEmojiFromDistance(g.dist)).join("");
+  
+  const text = `🌍 Globle 
+Target: ${countryName}
+Guesses: ${guesses.length}
+${emojiGrid}`;
+
+  copyToClipboard(text);
+}
+
+/**
+ * Share logic for Path Mode
+ */
+function sharePathResults() {
+  // 'currentChain', 'PATH_START_ISO3', and 'PATH_TARGET_ISO3' are global in path-mode.js
+  const start = COUNTRY_DATA[PATH_START_ISO3].name;
+  const target = COUNTRY_DATA[PATH_TARGET_ISO3].name;
+  const steps = currentChain.length - 1;
+  
+  const text = `🗺️ Globle (Path Mode)
+From: ${start}
+To: ${target}
+Steps: ${steps}
+Chain: ${currentChain.map(iso => COUNTRY_DATA[iso].name).join(" ➡️ ")}`;
+
+  copyToClipboard(text);
 }

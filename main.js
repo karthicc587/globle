@@ -44,7 +44,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   applyModeUI(mode, multiplayerEnabled);
 });
 
-// ─── Shared UI Logic ────────────────────────────────────────────────────────
+// ─── Shared UI Logic ───────────────────────────────────────────────────────
 
 function setupSharedUIEvents() {
   const input = document.getElementById("country-input");
@@ -113,6 +113,16 @@ function setupSharedUIEvents() {
       params.set("mode", getActiveMode());
       params.set("mp", enabled ? "1" : "0");
       window.location.search = params.toString();
+    });
+  }
+
+  const bordersToggle = document.getElementById("borders-toggle");
+  if (bordersToggle) {
+    bordersToggle.checked = localStorage.getItem("globle_borders_enabled") !== "0";
+    bordersToggle.addEventListener("change", () => {
+      const enabled = bordersToggle.checked;
+      localStorage.setItem("globle_borders_enabled", enabled ? "1" : "0");
+      applyBordersToggle();
     });
   }
 }

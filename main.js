@@ -8,7 +8,16 @@
  */
 function getActiveMode() {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('mode') || 'globle';
+  const mode = urlParams.get('mode') || 'globle';
+  if (mode === "multiplayer") return "globle";
+  return mode;
+}
+
+function getMultiplayerEnabled() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("mp") === "1") return true;
+  if (urlParams.get("mp") === "0") return false;
+  return localStorage.getItem("globle_mp_enabled") === "1";
 }
 
 // ─── Lifecycle Initialization ───────────────────────────────────────────────
@@ -19,13 +28,20 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupSharedUIEvents();
 
   const mode = getActiveMode();
-  if (mode === 'path') {
+  const multiplayerEnabled = getMultiplayerEnabled();
+
+  if (multiplayerEnabled) {
+    initMultiplayerMode(mode);
+    document.getElementById("guess-btn").onclick = submitMultiplayerGuess;
+  } else if (mode === 'path') {
     initPathMode();
     document.getElementById("guess-btn").onclick = submitPathGuess;
   } else {
     initGlobleMode();
     document.getElementById("guess-btn").onclick = submitGlobleGuess;
   }
+
+  applyModeUI(mode, multiplayerEnabled);
 });
 
 // ─── Shared UI Logic ────────────────────────────────────────────────────────
@@ -58,6 +74,11 @@ function setupSharedUIEvents() {
   // FIXED: Logic for Give Up now checks mode correctly on click
   document.getElementById("give-up-btn").onclick = () => {
     const mode = getActiveMode();
+    const multiplayerEnabled = getMultiplayerEnabled();
+    if (multiplayerEnabled) {
+      handleMultiplayerGiveUp();
+      return;
+    }
     if (mode === 'globle') {
       giveUp(); 
     } else if (mode === 'path') {
@@ -65,12 +86,58 @@ function setupSharedUIEvents() {
     }
   };
 
-  document.getElementById("play-again-btn").onclick = () => location.reload();
+  document.getElementById("play-again-btn").onclick = async () => {
+    if (getMultiplayerEnabled()) {
+      await handleMultiplayerPlayAgain();
+      return;
+    }
+    location.reload();
+  };
   document.getElementById("share-btn").onclick = () => {
-    if (getActiveMode() === 'globle') shareResults();
+    if (getMultiplayerEnabled()) {
+      shareMultiplayerResults();
+      return;
+    }
+    if (getActiveMode() === "globle") shareResults();
   };
   
   document.getElementById("reset-stats-btn").onclick = clearStats;
+
+  const multiplayerToggle = document.getElementById("multiplayer-toggle");
+  if (multiplayerToggle) {
+    multiplayerToggle.checked = getMultiplayerEnabled();
+    multiplayerToggle.addEventListener("change", () => {
+      const enabled = multiplayerToggle.checked;
+      localStorage.setItem("globle_mp_enabled", enabled ? "1" : "0");
+      const params = new URLSearchParams(window.location.search);
+      params.set("mode", getActiveMode());
+      params.set("mp", enabled ? "1" : "0");
+      window.location.search = params.toString();
+    });
+  }
+}
+
+function applyModeUI(mode, multiplayerEnabled) {
+  const modeLink = document.getElementById("mode-links");
+  if (modeLink) {
+    modeLink.style.display = "block";
+    const base = `?mp=${multiplayerEnabled ? "1" : "0"}`;
+    const links = modeLink.querySelectorAll("a");
+    links.forEach((a) => {
+      const isPath = a.textContent?.toLowerCase().includes("path");
+      a.href = `${base}&mode=${isPath ? "path" : "globle"}`;
+    });
+  }
+
+  const multiplayerPanel = document.getElementById("multiplayer-panel");
+  if (multiplayerPanel) multiplayerPanel.style.display = multiplayerEnabled ? "block" : "none";
+
+  const guessSectionTitle = document.getElementById("guess-section-title");
+  if (guessSectionTitle) {
+    if (multiplayerEnabled && mode === "path") guessSectionTitle.textContent = "Path";
+    else if (multiplayerEnabled) guessSectionTitle.textContent = "Round";
+    else guessSectionTitle.textContent = "Guesses";
+  }
 }
 
 

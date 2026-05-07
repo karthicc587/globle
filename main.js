@@ -116,15 +116,12 @@ function setupSharedUIEvents() {
     });
   }
 
-  const bordersToggle = document.getElementById("borders-toggle");
-  if (bordersToggle) {
-    bordersToggle.checked = localStorage.getItem("globle_borders_enabled") !== "0";
-    bordersToggle.addEventListener("change", () => {
-      const enabled = bordersToggle.checked;
-      localStorage.setItem("globle_borders_enabled", enabled ? "1" : "0");
-      applyBordersToggle();
-    });
-  }
+  // Add this inside setupSharedUIEvents() in main.js
+document.getElementById("borders-toggle").addEventListener("change", (e) => {
+  // If checked, remove the 'hide-borders' class; if unchecked, add it.
+  d3.select("#map").classed("hide-borders", !e.target.checked);
+});
+  
 }
 
 function applyModeUI(mode, multiplayerEnabled) {

@@ -284,10 +284,13 @@ svg { width: 100%; height: 100%; }
 .country { fill: #334155; stroke: #0f172a; stroke-width: 0.4; transition: fill 0.4s; cursor: pointer; }
 .country:hover { fill: #475569; }
 
-/* Country borders - applied when borders-visible class is added */
-.country.borders-visible { 
-  stroke: #475569; 
-  stroke-width: 0.8; 
+/* Hide borders when the toggle is unchecked */
+
+#map.hide-borders .country {
+  stroke: none !important;        /* Removes the stroke entirely */
+  stroke-width: 0 !important;     /* Ensures no width is calculated */
+  paint-order: fill markers;     /* Tells the browser to ignore the stroke layer */
+  shape-rendering: crispEdges;   /* Prevents the 'ghost' antialiasing lines */
 }
 
 /* Game-specific classes triggered by JS */

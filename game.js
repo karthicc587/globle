@@ -1,4 +1,4 @@
-// game.js — Complete Globle Clone with 3D Globe, Interaction, and Social features
+// game.js — Complete Globle with 3D Globe, Interaction, and Social features
 
 // ─── Configuration & Data Mapping ──────────────────────────────────────────
 
@@ -104,37 +104,47 @@ function recordGameResult(targetCountry, guessCount, isWin) {
   updateStatsDisplay();
 }
 
+// game.js
+
 function updateStatsDisplay() {
   const stats = getStats();
   const winRate = stats.totalGames > 0 ? Math.round((stats.wins / stats.totalGames) * 100) : 0;
   const avgGuesses = stats.wins > 0 ? Math.round(stats.totalWinGuesses / stats.wins * 10) / 10 : 0;
   
-  const statsDisplay = document.getElementById("stats-display");
-  if (statsDisplay) {
-    statsDisplay.innerHTML = `
-      <div class="stats-row">
-        <div class="stat-item">
-          <div class="stat-label">Games</div>
-          <div class="stat-value">${stats.totalGames}</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Win Rate</div>
-          <div class="stat-value">${winRate}%</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Streak</div>
-          <div class="stat-value">${stats.currentStreak}</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Best Streak</div>
-          <div class="stat-value">${stats.maxStreak}</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Avg Guesses</div>
-          <div class="stat-value">${avgGuesses}</div>
-        </div>
+  // Create the stats HTML
+  const statsHtml = `
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-label">Games</div>
+        <div class="stat-value">${stats.totalGames}</div>
       </div>
-    `;
+      <div class="stat-item">
+        <div class="stat-label">Win Rate</div>
+        <div class="stat-value">${winRate}%</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Streak</div>
+        <div class="stat-value">${stats.currentStreak}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Best</div>
+        <div class="stat-value">${stats.maxStreak}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Avg</div>
+        <div class="stat-value">${avgGuesses}</div>
+      </div>
+    </div>
+  `;
+
+  const display = document.getElementById("stats-display");
+  if (display) {
+    const existingRow = display.querySelector(".stats-row");
+    if (existingRow) {
+      existingRow.outerHTML = statsHtml;
+    } else {
+      display.insertAdjacentHTML('afterbegin', statsHtml);
+    }
   }
 }
 
@@ -416,6 +426,29 @@ function getBearingArrow(lat1, lon1, lat2, lon2) {
   return "➡️";
 }
 
+// Function to handle dynamic resizing
+function handleResize() {
+  const wrapper = document.getElementById("map-wrapper");
+  if (!wrapper || !projection) return;
+
+  // 1. Get new dimensions
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+
+  // 2. Update SVG dimensions
+  svgSel.attr("width", w).attr("height", h);
+
+  // 3. Update projection scale and translation
+  const newScale = Math.min(w, h) / INITIAL_SCALE_FACTOR;
+  projection
+    .scale(newScale)
+    .translate([w / 2, h / 2]);
+
+  // 4. Redraw everything
+  refreshMap();
+}
+
+
 function setupEvents() {
   const input = document.getElementById("country-input");
   const listEl = document.getElementById("autocomplete-list");
@@ -458,4 +491,11 @@ function setupEvents() {
   TARGET_ISO3 = getRandomCountry();
   await initMap();
   setupEvents();
+
+let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(handleResize, 100);
+  });
+
 })();

@@ -13,55 +13,67 @@ h1 {
 }
 
 /* Stats Display Section */
+/* styles.css */
+
 .stats-display {
   background: #1e293b;
-  padding: 12px;
+  padding: 15px;
   margin: 0 auto;
   text-align: center;
-  border-top: 1px solid #334155;
   border-bottom: 1px solid #334155;
+  display: flex;
+  flex-direction: column; /* Stack stats and button vertically */
+  align-items: center;
+  gap: 12px;
 }
 
 .stats-row {
   display: flex;
-  justify-content: space-around;
-  gap: 10px;
-}
-
-.stat-item {
-  flex: 1;
-  text-align: center;
-}
-
-.stat-label {
-  font-size: 11px;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.stat-value {
-  font-size: 18px;
-  font-weight: bold;
-  color: #10b981;
-  margin-top: 4px;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 600px;
+  flex-wrap: wrap; /* Allows stats to wrap on very small phones */
 }
 
 .reset-stats-btn {
-  position: absolute;
-  top: 60px;
-  right: 15px;
-  background: #64748b;
-  color: white;
-  border: none;
-  padding: 6px 12px;
+  /* Remove absolute positioning */
+  position: static; 
+  background: #334155; /* Slightly more subtle */
+  color: #94a3b8;
+  border: 1px solid #475569;
+  padding: 5px 12px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
-  z-index: 5;
+  transition: all 0.2s;
 }
 
-.reset-stats-btn:hover { background: #475569; }
+.reset-stats-btn:hover {
+  background: #ef4444; /* Turn red only on hover to show danger */
+  color: white;
+  border-color: #ef4444;
+}
+
+/* Handle layout for narrow screens */
+@media (max-width: 600px) {
+  .container {
+    flex-direction: column; /* Stack sidebar and map vertically */
+    height: auto;
+    overflow: visible;
+  }
+  
+  .left-panel {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #334155;
+  }
+
+  #map-wrapper {
+    height: 50vh; /* Give map a fixed height on mobile */
+  }
+}
 
 /* Flex Container for Panels */
 .container { 
@@ -188,15 +200,17 @@ button { padding: 8px; cursor: pointer; }
 
 /* Map Section */
 #map-wrapper {
-  flex: 1;
+  flex: 1; /* This allows it to fill all available space */
   position: relative;
   cursor: grab;
   background: #0f172a;
+  min-height: 300px; /* Prevents it from disappearing on tiny screens */
+  overflow: hidden;
 }
 
 #map-wrapper:active { cursor: grabbing; }
 
-#map { width: 100%; height: 100%; }
+#map { display: block; width: 100%; height: 100%; }
 
 .sphere { fill: #1e293b; stroke: #334155; stroke-width: 0.5; }
 .graticule { fill: none; stroke: #475569; stroke-width: 0.2; opacity: 0.5; }
@@ -206,29 +220,46 @@ button { padding: 8px; cursor: pointer; }
 
 /* Sticky Compass Footer */
 .setting-item {
-  margin-top: auto; /* Pushes to bottom */
-  padding: 15px 10px;
+  margin-top: auto; 
+  /* Remove side padding from the container so it touches the edges */
+  padding: 15px 0; 
   border-top: 1px solid #334155;
   background: #1e293b;
   position: sticky;
   bottom: 0;
-z-index: 20;
-  font-size: 14px;
-  color: #94a3b8;
+  z-index: 20;
 }
 
 .setting-item label {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-white-space: nowrap;
-justify-content: flex-start;
-margin-bottom: 8px;
+  flex-direction: row-reverse; 
+  justify-content: space-between;
+  
+  /* Use width: 100% and box-sizing to ensure it fills the panel */
+  width: 100%;
+  box-sizing: border-box;
+  
+  /* Apply padding here instead of on the container */
+  padding: 8px 15px; 
+  
+  color: #94a3b8;
+  font-size: 14px;
+  transition: background 0.2s;
 }
 
-.setting-item label:last-child {
-  margin-bottom: 0;
+/* Optional: Add a hover effect for better UX */
+.setting-item label:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.setting-item input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+  /* Adjust size if the box feels too small on the right */
+  width: 16px;
+  height: 16px;
 }
 
 /* Tooltip */

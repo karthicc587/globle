@@ -1,48 +1,48 @@
-/* General Layout & Background */
+/* styles.css — Unified Styles for Globle & Path Modes */
+
+/* ─── General Layout ─────────────────────────────────────────────────────── */
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
   background: #0f172a;
   color: white;
-  overflow: hidden;
+  overflow: hidden; /* Prevents body scroll; sidebar handles its own */
 }
 
 h1 { 
   text-align: center; 
-  margin: 10px; 
+  margin: 15px 0;
+  font-weight: 300;
+  letter-spacing: 2px;
 }
 
-/* Stats Display Section */
-/* styles.css */
-
+/* ─── Stats Banner ───────────────────────────────────────────────────────── */
 .stats-display {
   background: #1e293b;
-  padding: 15px;
-  margin: 0 auto;
-  text-align: center;
+  padding: 10px 15px;
   border-bottom: 1px solid #334155;
   display: flex;
-  flex-direction: column; /* Stack stats and button vertically */
+  justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 20px;
 }
 
 .stats-row {
   display: flex;
-  justify-content: center;
-  gap: 20px;
-  width: 100%;
-  max-width: 600px;
-  flex-wrap: wrap; /* Allows stats to wrap on very small phones */
+  gap: 15px;
+  font-size: 0.9rem;
+}
+
+.stat-item span {
+  color: #94a3b8;
+  margin-right: 4px;
 }
 
 .reset-stats-btn {
-  /* Remove absolute positioning */
-  position: static; 
-  background: #334155; /* Slightly more subtle */
-  color: #94a3b8;
-  border: 1px solid #475569;
-  padding: 5px 12px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #334155;
+  padding: 4px 8px;
   border-radius: 4px;
   font-size: 11px;
   cursor: pointer;
@@ -50,230 +50,222 @@ h1 {
 }
 
 .reset-stats-btn:hover {
-  background: #ef4444; /* Turn red only on hover to show danger */
+  background: #ef4444;
   color: white;
   border-color: #ef4444;
 }
 
-/* Handle layout for narrow screens */
-@media (max-width: 600px) {
-  .container {
-    flex-direction: column; /* Stack sidebar and map vertically */
-    height: auto;
-    overflow: visible;
-  }
-  
-  .left-panel {
-    width: 100%;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid #334155;
-  }
-
-  #map-wrapper {
-    height: 50vh; /* Give map a fixed height on mobile */
-  }
-}
-
-/* Flex Container for Panels */
+/* ─── Main Container ─────────────────────────────────────────────────────── */
 .container { 
   display: flex; 
   height: calc(100vh - 120px); 
 }
 
-/* Left Panel Sidebar */
+/* ─── Sidebar (Left Panel) ───────────────────────────────────────────────── */
 .left-panel {
-  width: 320px;
-  padding: 15px;
+  width: 350px;
+  padding: 20px;
   background: #1e293b;
+  border-right: 1px solid #334155;
   overflow-y: auto;
-  z-index: 10;
-  display: flex;         /* Added to support footer positioning */
-  flex-direction: column; /* Vertical stack */
+  display: flex;
+  flex-direction: column;
 }
 
-/* Input Area */
 .input-wrapper { 
   position: relative; 
   margin-bottom: 15px;
+  display: flex;
+  gap: 5px;
 }
 
 input { 
-  width: 65%; 
-  padding: 10px; 
-  border-radius: 4px;
+  flex: 1;
+  padding: 12px; 
+  border-radius: 6px;
   border: 1px solid #334155;
   background: #0f172a;
   color: white;
+  outline: none;
 }
 
-button { padding: 8px; cursor: pointer; }
+input:focus {
+  border-color: #3b82f6;
+}
 
-#guess-btn {
-  background: #10b981;
-  color: white;
-  border: none;
-  border-radius: 4px;
+button { 
+  padding: 10px 15px; 
+  cursor: pointer; 
+  border-radius: 6px;
   font-weight: bold;
-  margin-left: 4px;
+  border: none;
 }
 
+#guess-btn { background: #10b981; color: white; }
 #guess-btn:hover { background: #059669; }
-#guess-btn:disabled { background: #6b7280; cursor: not-allowed; }
 
 .give-up-btn {
-  display: block;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
-  padding: 10px;
-  margin-top: 8px;
+  background: #334155;
+  color: #f87171;
+  margin-top: 5px;
   width: 100%;
 }
 
-/* Autocomplete Menu */
+.give-up-btn:hover { background: #475569; }
+
+/* ─── Autocomplete ───────────────────────────────────────────────────────── */
 #autocomplete-list {
   position: absolute;
-  background: white;
-  color: black;
+  top: 100%;
+  left: 0;
   width: 100%;
-  display: none;
-  max-height: 200px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-top: none;
+  z-index: 100;
+  max-height: 250px;
   overflow-y: auto;
-  z-index: 20;
-  border-radius: 4px;
-  margin-top: 2px;
+  border-radius: 0 0 6px 6px;
+  display: none;
 }
 
 #autocomplete-list.open { display: block; }
 
-.autocomplete-item { padding: 8px; cursor: pointer; }
-.autocomplete-item:hover { background: #e2e8f0; }
+.autocomplete-item { 
+  padding: 10px; 
+  cursor: pointer; 
+  border-bottom: 1px solid #334155;
+}
 
-/* Win Message & Emoji Grid */
+.autocomplete-item:hover { background: #334155; }
+
+/* ─── Feedback & Messages ────────────────────────────────────────────────── */
+#error-msg { 
+  color: #fb7185; 
+  font-size: 13px; 
+  margin-bottom: 10px; 
+  min-height: 1.2em;
+}
+
 #win-message {
-  display: none;
-  background: #065f46;
+  background: #064e3b;
   padding: 20px;
-  margin: 15px 0;
+  margin-bottom: 20px;
   border-radius: 8px;
   text-align: center;
-  border: 2px solid #10b981;
+  border: 1px solid #10b981;
 }
 
-#win-text {
-  line-height: 1.6;
-}
+#win-text { line-height: 1.6; font-size: 1.1rem; }
 
-#play-again-btn, #share-btn {
-  border: none;
-  padding: 10px;
-  border-radius: 4px;
-  font-weight: bold;
-  margin-top: 10px;
-  width: 100%;
-}
+#play-again-btn { background: #10b981; color: white; width: 100%; margin-top: 10px; }
+#share-btn { background: #3b82f6; color: white; width: 100%; margin-top: 10px; }
 
-#play-again-btn { background: #10b981; color: white; }
-#share-btn { background: #334155; color: white; }
-
-/* Guess List */
+/* ─── Guess List ─────────────────────────────────────────────────────────── */
 .guess-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 6px 0;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  margin: 8px 0;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
   font-size: 14px;
+  border-left: 3px solid transparent;
 }
 
 .g-swatch { 
-  width: 14px; 
-  height: 14px; 
+  width: 12px; 
+  height: 12px; 
   border-radius: 50%; 
-  border: 1px solid white; 
+  border: 1px solid rgba(255,255,255,0.5); 
 }
 
-/* Map Section */
+/* ─── Settings ───────────────────────────────────────────────────────────── */
+.setting-item {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid #334155;
+}
+
+.setting-item label {
+  display: flex;
+  align-items: center;
+  
+  /* Reverse the order so the input comes after the text */
+  flex-direction: row-reverse; 
+  
+  /* Push text to the far left and checkbox to the far right */
+  justify-content: space-between; 
+  
+  /* Ensure the label spans the entire width of the sidebar */
+  width: 100%;
+  box-sizing: border-box;
+  
+  /* Visual styling */
+  padding: 10px 15px;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.setting-item label:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+/* Optional: If the checkbox still feels slightly off-center vertically */
+.setting-item input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* ─── Map Section ────────────────────────────────────────────────────────── */
 #map-wrapper {
-  flex: 1; /* This allows it to fill all available space */
+  flex: 1;
   position: relative;
-  cursor: grab;
   background: #0f172a;
-  min-height: 300px; /* Prevents it from disappearing on tiny screens */
-  overflow: hidden;
+  cursor: grab;
 }
 
 #map-wrapper:active { cursor: grabbing; }
 
-#map { display: block; width: 100%; height: 100%; }
+svg { width: 100%; height: 100%; }
 
 .sphere { fill: #1e293b; stroke: #334155; stroke-width: 0.5; }
-.graticule { fill: none; stroke: #475569; stroke-width: 0.2; opacity: 0.5; }
-.country { fill: #334155; stroke: #0f172a; stroke-width: 0.3; transition: fill 0.5s; }
-.country.guessed { stroke: white; stroke-width: 1; }
-.country.target { stroke: #fbbf24; stroke-width: 2.5; fill: #fbbf24; }
+.graticule { fill: none; stroke: #475569; stroke-width: 0.2; opacity: 0.3; }
+.country { fill: #334155; stroke: #0f172a; stroke-width: 0.4; transition: fill 0.4s; cursor: pointer; }
+.country:hover { fill: #475569; }
 
-/* Sticky Compass Footer */
-.setting-item {
-  margin-top: auto; 
-  /* Remove side padding from the container so it touches the edges */
-  padding: 15px 0; 
-  border-top: 1px solid #334155;
-  background: #1e293b;
-  position: sticky;
-  bottom: 0;
-  z-index: 20;
+/* Game-specific classes triggered by JS */
+.country.guessed { stroke: white; stroke-width: 0.8; }
+.country.target { stroke: #fbbf24; stroke-width: 2; fill: #fbbf24; }
+.country.optimal-path {
+  stroke: #f87171 !important; /* Pale Red */
+  stroke-width: 2.5px !important;
+  stroke-dasharray: 2, 2; /* Optional: Makes it a dashed line for a "map route" look */
 }
 
-.setting-item label {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  flex-direction: row-reverse; 
-  justify-content: space-between;
-  
-  /* Use width: 100% and box-sizing to ensure it fills the panel */
-  width: 100%;
-  box-sizing: border-box;
-  
-  /* Apply padding here instead of on the container */
-  padding: 8px 15px; 
-  
-  color: #94a3b8;
-  font-size: 14px;
-  transition: background 0.2s;
-}
-
-/* Optional: Add a hover effect for better UX */
-.setting-item label:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.setting-item input[type="checkbox"] {
-  cursor: pointer;
-  margin: 0;
-  /* Adjust size if the box feels too small on the right */
-  width: 16px;
-  height: 16px;
-}
-
-/* Tooltip */
+/* ─── Tooltip ────────────────────────────────────────────────────────────── */
 #tooltip {
   position: absolute;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(15, 23, 42, 0.9);
   padding: 6px 12px;
   border-radius: 4px;
   font-size: 12px;
   pointer-events: none;
   display: none;
-  z-index: 100;
-  border: 1px solid #475569;
+  z-index: 1000;
+  border: 1px solid #334155;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 #tooltip.visible { display: block; }
-#error-msg { color: #fb7185; font-size: 14px; margin: 5px 0; }
+
+/* ─── Mobile Responsiveness ──────────────────────────────────────────────── */
+@media (max-width: 850px) {
+  .container { flex-direction: column; height: auto; overflow: visible; }
+  .left-panel { width: 100%; height: auto; border-right: none; }
+  #map-wrapper { height: 400px; order: -1; } /* Map on top for mobile */
+}

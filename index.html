@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Globle</title>
+  <title>Globle - Modular Edition</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/topojson-client@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <h1>🌍 Globle </h1>
   
-<div id="stats-display" class="stats-display">
-  <button id="reset-stats-btn" class="reset-stats-btn">Reset Progress</button>
-</div>
+  <div id="stats-display" class="stats-display">
+    <button id="reset-stats-btn" class="reset-stats-btn">Reset Progress</button>
+  </div>
   
   <div class="container">
     <div class="left-panel">
@@ -26,7 +27,7 @@
 
       <div id="error-msg"></div>
       
-      <div id="win-message">
+      <div id="win-message" style="display: none;">
         <div id="win-text"></div>
         <button id="share-btn">Copy Results 📋</button>
         <button id="play-again-btn">Play Again</button>
@@ -43,6 +44,13 @@
           <input type="checkbox" id="tooltip-toggle" checked> Enable Hover Names 🖱️
         </label>
       </div>
+      
+      <div style="margin-top: 20px; text-align: center;">
+        <small>
+          <a href="?mode=globle" style="color: #94a3b8; text-decoration: none;">Classic Mode</a> | 
+          <a href="?mode=path" style="color: #94a3b8; text-decoration: none;">Path Mode</a>
+        </small>
+      </div>
     </div>
 
     <div id="map-wrapper">
@@ -52,6 +60,13 @@
   </div>
 
   <script src="countries.js"></script>
-  <script src="game.js"></script>
+  <script src="neighbors.js"></script>
+
+  <script src="map.js"></script>
+
+  <script src="globle-mode.js"></script>
+  <script src="path-mode.js"></script>
+
+  <script src="main.js"></script>
 </body>
 </html>

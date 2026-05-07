@@ -781,20 +781,58 @@ function maybeShowMultiplayerResults() {
 
 async function shareMultiplayerResults() {
   if (!mpRoom || mpResults.length < 2) return;
+  
   const isPathMode = (mpRoom.mode || mpGameMode) === "path";
-  const unit = isPathMode ? "steps" : "guesses";
   const winner = computeWinner(mpResults);
   const myId = getMyPlayerId();
+  
+  let header = "";
+  let context = "";
+  let visualData = "";
+
+  if (isPathMode) {
+    header = "🗺️ Globle (Path Mode)";
+    const startName = COUNTRY_DATA[mpPathStartIso3]?.name || "Unknown";
+    const targetName = COUNTRY_DATA[mpTargetIso3]?.name || "Unknown";
+    context = `From: ${startName}\nTo: ${targetName}`;
+    
+    // Follows main.js convention for Path: Steps + ➡️ Chain
+    const steps = Math.max(mpPathChain.length - 1, 0);
+    const chainNames = mpPathChain.map(iso => COUNTRY_DATA[iso]?.name || iso).join(" ➡️ ");
+    visualData = `Steps: ${steps}\nChain: ${chainNames}`;
+  } else {
+    header = "🌍 Globle";
+    const targetName = COUNTRY_DATA[mpTargetIso3]?.name || "Unknown";
+    context = `Target: ${targetName}`;
+    
+    // Follows main.js convention for Globle: Guesses + Emoji Grid
+    const emojiGrid = mpGuesses.map(g => getEmojiFromDistance(g.dist)).join("");
+    visualData = `Guesses: ${mpGuesses.length}\n${emojiGrid}`;
+  }
+
+  const verdict = winner ? (winner === myId ? "Result: I won!" : "Result: I lost.") : "Result: Tie game.";
+  const unit = isPathMode ? "steps" : "guesses";
+
   const text = [
-    `Globle Multiplayer (${getMultiplayerModeLabel()}) Room ${mpRoom.id}`,
-    winner ? (winner === myId ? "Result: I won." : "Result: I lost.") : "Result: Tie.",
-    ...mpResults.map(r => `${mpPlayers.find(p => p.player_id === r.player_id)?.display_name || "Player"}: ${r.guess_count} ${unit}, ${formatDuration(r.duration_ms)}`)
+    `${header} - Multiplayer`,
+    `Room: ${mpRoom.id}`,
+    context,
+    verdict,
+    "",
+    visualData,
+    "",
+    ...mpResults.map(r => {
+      const pName = mpPlayers.find(p => p.player_id === r.player_id)?.display_name || "Player";
+      const status = r.won ? "Solved" : "Gave up";
+      return `${pName}: ${status} in ${r.guess_count} ${unit} (${formatDuration(r.duration_ms)})`;
+    })
   ].join("\n");
 
   try {
     await navigator.clipboard.writeText(text);
-    setMultiplayerStatus("Results copied.");
-  } catch {
+    setMultiplayerStatus("Results copied to clipboard!");
+  } catch (err) {
+    console.error("Failed to copy: ", err);
     setErrorMessage("Clipboard unavailable.");
   }
 }

@@ -1,6 +1,6 @@
 // map.js — Core D3 Globe with Zoom & Snap Functionality
 
-// ─── Data Mapping ──────────────────────────────────────────────────────────
+// ─── Data Mapping ─────────────────────────────────────────────────────────
 const NUMERIC_TO_ISO3 = {
   4:"AFG",8:"ALB",12:"DZA",20:"AND",24:"AGO",32:"ARG",51:"ARM",
   36:"AUS",40:"AUT",31:"AZE",44:"BHS",48:"BHR",50:"BGD",112:"BLR",
@@ -99,6 +99,7 @@ async function initGlobe(wrapperId = "map-wrapper", svgId = "map") {
   }));
 
   renderCountries();
+  applyBordersToggle();
 }
 
 /**
@@ -169,6 +170,18 @@ function renderCountries() {
       const mapClickEvent = new CustomEvent("mapCountryClick", { detail: { iso3: d.iso3 } });
       window.dispatchEvent(mapClickEvent);
     });
+}
+
+/**
+ * Applies or removes the borders-visible class based on the checkbox state.
+ */
+function applyBordersToggle() {
+  if (!gSel) return;
+  const bordersToggle = document.getElementById("borders-toggle");
+  const enabled = bordersToggle && bordersToggle.checked;
+  
+  gSel.selectAll(".country")
+    .classed("borders-visible", enabled);
 }
 
 // Resizing Handler

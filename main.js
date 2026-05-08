@@ -263,7 +263,9 @@ function updateStatsDisplay() {
 
 function clearStats() {
   if (confirm("Reset all progress?")) {
-    localStorage.removeItem(STORAGE_KEY);
+    // Get the correct key based on the active game mode
+    const key = getStorageKey(); 
+    localStorage.removeItem(key);
     location.reload();
   }
 }

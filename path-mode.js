@@ -12,6 +12,7 @@ let pathWon = false;
  * Starts a new Path Mode game instance.
  */
 async function initPathMode() {
+  initializeStats();
   // 1. Find two countries with a valid land connection at least 4 steps apart
   const keys = Object.keys(NEIGHBOR_DATA).filter(k => (NEIGHBOR_DATA[k] || []).length > 0);
   
@@ -82,7 +83,7 @@ function handlePathWin() {
   pathWon = true;
   const optimalPath = getPathBFS(PATH_START_ISO3, PATH_TARGET_ISO3);
   const userScore = currentChain.length - 1;
-  
+  recordGameResult(COUNTRY_DATA[PATH_TARGET_ISO3].name, userScore, true);
   const winMsg = document.getElementById("win-message");
   winMsg.style.display = "block";
   document.getElementById("win-text").innerHTML = `
@@ -101,7 +102,7 @@ function handlePathGiveUp() {
   
   pathWon = true; // Stop further guesses
   const optimalPath = getPathBFS(PATH_START_ISO3, PATH_TARGET_ISO3);
-  
+  recordGameResult(COUNTRY_DATA[PATH_TARGET_ISO3].name, currentChain.length - 1, false);
   const winMsg = document.getElementById("win-message");
   winMsg.style.display = "block";
   winMsg.style.borderColor = "#ef4444"; // Red border for "Give Up"

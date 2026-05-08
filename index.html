@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h1>🌍 Globle </h1>
+  <h1>🌍 Globle</h1>
   
   <div id="stats-display" class="stats-display">
     <button id="reset-stats-btn" class="reset-stats-btn">Reset Progress</button>
@@ -57,48 +57,46 @@
 
       <div class="setting-item">
         <label>
-          <input type="checkbox" id="compass-toggle" checked> Enable Compass Arrows 🧭
+          <span>Enable Compass Arrows 🧭</span>
+          <input type="checkbox" id="compass-toggle" checked>
         </label>
-        <label style="margin-top: 10px;">
-          <input type="checkbox" id="tooltip-toggle" checked> Enable Hover Names 🖱️
+        <label>
+          <span>Enable Hover Names 🖱️</span>
+          <input type="checkbox" id="tooltip-toggle" checked>
         </label>
-        <label style="margin-top: 10px;">
-          <input type="checkbox" id="borders-toggle" checked> Enable Country Borders 🗺️
+        <label>
+          <span>Enable Country Borders 🗺️</span>
+          <input type="checkbox" id="borders-toggle" checked>
         </label>
-        <label style="margin-top: 10px;">
-          <input type="checkbox" id="multiplayer-toggle"> Multiplayer Mode 👥
+        <label>
+          <span>Multiplayer Mode 👥</span>
+          <input type="checkbox" id="multiplayer-toggle">
         </label>
       </div>
       
       <div id="mode-links" style="margin-top: 20px; text-align: center;">
-        <small>
-          <a href="?mode=globle" style="color: #94a3b8; text-decoration: none;">Classic Mode</a> | 
-          <a href="?mode=path" style="color: #94a3b8; text-decoration: none;">Path Mode</a>
-        </small>
+        <div class="mode-toggle-container">
+          <a href="?mode=globle" id="link-globle" class="mode-link">Classic Mode</a>
+          <a href="?mode=path" id="link-path" class="mode-link">Path Mode</a>
+        </div>
       </div>
-    </div>
-
-    <div id="map-wrapper">
+    </div> <div id="map-wrapper">
       <svg id="map"></svg>
       <div id="tooltip"></div>
     </div>
-  </div>
-
-  <script src="countries.js"></script>
+  </div> <script src="countries.js"></script>
   <script src="neighbors.js"></script>
-
   <script src="map.js"></script>
-
   <script src="globle-mode.js"></script>
   <script src="path-mode.js"></script>
 
   <script>
+    // Configuration for Multiplayer Backend
     window.SUPABASE_URL = "https://heitfpjevgoodhbollfo.supabase.co";
-    window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaXRmcGpldmdvb2RoYm9sbGZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMTU3MDIsImV4cCI6MjA5MzY5MTcwMn0.Fb4n71DlIbLx8Dtu968XQS-WwWrA3dkOQj85u23WWeA"
+    window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlaXRmcGpldmdvb2RoYm9sbGZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxMTU3MDIsImV4cCI6MjA5MzY5MTcwMn0.Fb4n71DlIbLx8Dtu968XQS-WwWrA3dkOQj85u23WWeA";
   </script>
 
   <script src="multiplayer-mode.js"></script>
-
   <script src="main.js"></script>
 </body>
 </html>

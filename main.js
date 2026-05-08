@@ -130,37 +130,69 @@ document.getElementById("borders-toggle").addEventListener("change", (e) => {
   
 }
 
+/**
+ * Updates the UI based on the current game mode and multiplayer status.
+ * Handles the highlighed rectangle effect for mode selection.
+ */
 function applyModeUI(mode, multiplayerEnabled) {
-  const modeLink = document.getElementById("mode-links");
-  if (modeLink) {
-    modeLink.style.display = "block";
+  const modeLinkContainer = document.getElementById("mode-links");
+  
+  if (modeLinkContainer) {
+    modeLinkContainer.style.display = "block";
+    
+    // 1. Update the hrefs to preserve the multiplayer state
     const base = `?mp=${multiplayerEnabled ? "1" : "0"}`;
-    const links = modeLink.querySelectorAll("a");
-    links.forEach((a) => {
-      const isPath = a.textContent?.toLowerCase().includes("path");
-      a.href = `${base}&mode=${isPath ? "path" : "globle"}`;
-    });
+    const globleLink = document.getElementById("link-globle");
+    const pathLink = document.getElementById("link-path");
+
+    if (globleLink) globleLink.href = `${base}&mode=globle`;
+    if (pathLink) pathLink.href = `${base}&mode=path`;
+
+    // 2. Handle the active highlight class
+    // Remove 'active' from all links first
+    const links = modeLinkContainer.querySelectorAll(".mode-link");
+    links.forEach(link => link.classList.remove("active"));
+
+    // Add 'active' to the link matching the current mode
+    if (mode === "path") {
+      pathLink?.classList.add("active");
+    } else {
+      // Default to globle if mode is classic or anything else
+      globleLink?.classList.add("active");
+    }
   }
 
+  // 3. Handle Multiplayer Panel visibility
   const multiplayerPanel = document.getElementById("multiplayer-panel");
-  if (multiplayerPanel) multiplayerPanel.style.display = multiplayerEnabled ? "block" : "none";
+  if (multiplayerPanel) {
+    multiplayerPanel.style.display = multiplayerEnabled ? "block" : "none";
+  }
 
+  // 4. Update the Section Title based on mode and MP status
   const guessSectionTitle = document.getElementById("guess-section-title");
   if (guessSectionTitle) {
-    if (multiplayerEnabled && mode === "path") guessSectionTitle.textContent = "Path";
-    else if (multiplayerEnabled) guessSectionTitle.textContent = "Round";
-    else guessSectionTitle.textContent = "Guesses";
+    if (multiplayerEnabled && mode === "path") {
+      guessSectionTitle.textContent = "Path";
+    } else if (multiplayerEnabled) {
+      guessSectionTitle.textContent = "Round";
+    } else {
+      guessSectionTitle.textContent = "Guesses";
+    }
   }
 }
 
 
 // ─── Global Stats Persistence ──────────────────────────────────────────────
 
-const STORAGE_KEY = "globle_stats";
+function getStorageKey() {
+  const mode = getActiveMode();
+  return mode === 'path' ? "globle_path_stats" : "globle_stats";
+}
 
 function initializeStats() {
-  if (!localStorage.getItem(STORAGE_KEY)) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+  const key = getStorageKey();
+  if (!localStorage.getItem(key)) {
+    localStorage.setItem(key, JSON.stringify({
       totalGames: 0,
       wins: 0,
       losses: 0,
@@ -172,14 +204,15 @@ function initializeStats() {
       gameHistory: []
     }));
   }
+  updateStatsDisplay();
 }
 
 function getStats() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  return JSON.parse(localStorage.getItem(getStorageKey()) || "{}");
 }
 
 function saveStats(stats) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+  localStorage.setItem(getStorageKey(), JSON.stringify(stats));
 }
 
 function recordGameResult(targetCountry, guessCount, isWin) {
@@ -205,13 +238,13 @@ function recordGameResult(targetCountry, guessCount, isWin) {
 
 function updateStatsDisplay() {
   const stats = getStats();
+  const mode = getActiveMode();
   const winRate = stats.totalGames > 0 ? Math.round((stats.wins / stats.totalGames) * 100) : 0;
   const avgGuesses = stats.wins > 0 ? (stats.totalWinGuesses / stats.wins).toFixed(1) : 0;
   
   const display = document.getElementById("stats-display");
   if (!display) return;
 
-  // Use simple text or inject a row
   let row = display.querySelector(".stats-row");
   if (!row) {
     row = document.createElement("div");
@@ -219,11 +252,12 @@ function updateStatsDisplay() {
     display.prepend(row);
   }
 
+  // Identical layout, but contextually correct for both modes
   row.innerHTML = `
     <div class="stat-item"><span>Games:</span> ${stats.totalGames}</div>
     <div class="stat-item"><span>Win %:</span> ${winRate}</div>
     <div class="stat-item"><span>Streak:</span> ${stats.currentStreak}</div>
-    <div class="stat-item"><span>Avg:</span> ${avgGuesses}</div>
+    <div class="stat-item"><span>Avg ${mode === 'path' ? 'Steps' : 'Guesses'}:</span> ${avgGuesses}</div>
   `;
 }
 

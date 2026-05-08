@@ -198,14 +198,19 @@ button {
   padding: 20px;
   margin-bottom: 20px;
   border-radius: 8px;
-  text-align: center;
   border: 1px solid #10b981;
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  gap: 12px;
 }
 
 #win-text { line-height: 1.6; font-size: 1.1rem; }
 
 #play-again-btn { background: #10b981; color: white; width: 100%; margin-top: 10px; }
 #share-btn { background: #3b82f6; color: white; width: 100%; margin-top: 10px; }
+#mp-rematch-btn { background: #8b5cf6; color: white; width: 100%; margin-top: 10px; }
+
 
 /* ─── Guess List ─────────────────────────────────────────────────────────── */
 .guess-item {

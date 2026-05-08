@@ -1,30 +1,27 @@
--- Multiplayer V1 schema for async turn-based rooms.
--- Run in Supabase SQL editor.
+-- Multiplayer V1.1 schema for async turn-based rooms.
+-- Includes "Quick Play" (Rematch) session chaining.
 
 create extension if not exists pgcrypto;
 
+-- ── ROOMS TABLE ────────────────────────────────────────────────────────────
 create table if not exists public.rooms (
   id text primary key,
-  created_by uuid not null,
+  created_by uuid not null default auth.uid(),
   status text not null default 'waiting' check (status in ('waiting', 'active', 'finished', 'expired')),
   mode text not null default 'globle' check (mode in ('globle', 'path')),
   path_start_iso3 text check (path_start_iso3 is null or char_length(path_start_iso3) = 3),
   target_iso3 text check (char_length(target_iso3) = 3),
+  
+  -- Pointer for Quick Play / Rematch feature
+  next_room_id text references public.rooms(id), 
+  
   created_at timestamptz not null default now(),
   started_at timestamptz,
   finished_at timestamptz,
   expires_at timestamptz not null default (now() + interval '24 hours')
 );
 
-alter table public.rooms alter column created_by set default auth.uid();
-alter table public.rooms add column if not exists path_start_iso3 text;
-alter table public.rooms
-  drop constraint if exists rooms_mode_check,
-  add constraint rooms_mode_check check (mode in ('globle', 'path'));
-alter table public.rooms
-  drop constraint if exists rooms_path_start_iso3_check,
-  add constraint rooms_path_start_iso3_check check (path_start_iso3 is null or char_length(path_start_iso3) = 3);
-
+-- ── ROOM PLAYERS ───────────────────────────────────────────────────────────
 create table if not exists public.room_players (
   room_id text not null references public.rooms(id) on delete cascade,
   player_id uuid not null,
@@ -36,6 +33,7 @@ create table if not exists public.room_players (
   primary key (room_id, player_id)
 );
 
+-- ── ROOM GUESSES ───────────────────────────────────────────────────────────
 create table if not exists public.room_guesses (
   room_id text not null,
   player_id uuid not null,
@@ -47,6 +45,7 @@ create table if not exists public.room_guesses (
   foreign key (room_id, player_id) references public.room_players(room_id, player_id) on delete cascade
 );
 
+-- ── ROOM RESULTS ───────────────────────────────────────────────────────────
 create table if not exists public.room_results (
   room_id text not null,
   player_id uuid not null,
@@ -59,12 +58,13 @@ create table if not exists public.room_results (
   foreign key (room_id, player_id) references public.room_players(room_id, player_id) on delete cascade
 );
 
+-- ── ROW LEVEL SECURITY (RLS) ───────────────────────────────────────────────
 alter table public.rooms enable row level security;
 alter table public.room_players enable row level security;
 alter table public.room_guesses enable row level security;
 alter table public.room_results enable row level security;
 
--- Avoid RLS recursion by checking membership through a SECURITY DEFINER function.
+-- Security helper function
 create or replace function public.is_room_member(target_room_id text)
 returns boolean
 language sql
@@ -81,80 +81,25 @@ $$;
 
 grant execute on function public.is_room_member(text) to anon, authenticated;
 
--- Room visibility: only joined players can read room and game data.
-drop policy if exists "rooms_select_joined" on public.rooms;
-create policy "rooms_select_joined" on public.rooms
-for select using (public.is_room_member(id));
+-- Policies
+create policy "rooms_select_joined" on public.rooms for select using (public.is_room_member(id));
+create policy "rooms_insert_owner" on public.rooms for insert with check (auth.uid() is not null and created_by = auth.uid());
+create policy "rooms_update_member" on public.rooms for update using (public.is_room_member(id));
 
-drop policy if exists "rooms_insert_owner" on public.rooms;
-create policy "rooms_insert_owner" on public.rooms
-for insert with check (auth.uid() is not null and created_by = auth.uid());
+create policy "room_players_select_joined" on public.room_players for select using (public.is_room_member(room_id));
+create policy "room_players_insert_self" on public.room_players for insert with check (player_id = auth.uid());
+create policy "room_players_update_self" on public.room_players for update using (player_id = auth.uid());
+create policy "room_players_delete_self" on public.room_players for delete using (player_id = auth.uid());
 
-drop policy if exists "rooms_update_owner" on public.rooms;
-create policy "rooms_update_owner" on public.rooms
-for update using (created_by = auth.uid());
+create policy "room_guesses_select_joined" on public.room_guesses for select using (public.is_room_member(room_id));
+create policy "room_guesses_insert_self" on public.room_guesses for insert with check (player_id = auth.uid());
 
-drop policy if exists "room_players_select_joined" on public.room_players;
-create policy "room_players_select_joined" on public.room_players
-for select using (public.is_room_member(room_id));
+create policy "room_results_select_joined" on public.room_results for select using (public.is_room_member(room_id));
+create policy "room_results_insert_self" on public.room_results for insert with check (player_id = auth.uid());
 
-drop policy if exists "room_players_insert_self" on public.room_players;
-create policy "room_players_insert_self" on public.room_players
-for insert with check (player_id = auth.uid());
-
-drop policy if exists "room_players_update_self" on public.room_players;
-create policy "room_players_update_self" on public.room_players
-for update using (player_id = auth.uid());
-
-drop policy if exists "room_guesses_select_joined" on public.room_guesses;
-create policy "room_guesses_select_joined" on public.room_guesses
-for select using (public.is_room_member(room_id));
-
-drop policy if exists "room_guesses_insert_self" on public.room_guesses;
-create policy "room_guesses_insert_self" on public.room_guesses
-for insert with check (
-  player_id = auth.uid()
-  and exists (
-    select 1 from public.rooms r
-    where r.id = room_guesses.room_id
-      and r.status = 'active'
-      and (r.expires_at is null or r.expires_at > now())
-  )
-);
-
-drop policy if exists "room_results_select_joined" on public.room_results;
-create policy "room_results_select_joined" on public.room_results
-for select using (public.is_room_member(room_id));
-
-drop policy if exists "room_results_insert_self" on public.room_results;
-create policy "room_results_insert_self" on public.room_results
-for insert with check (player_id = auth.uid());
-
--- Realtime publication.
-do $$
-begin
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'rooms'
-  ) then
-    alter publication supabase_realtime add table public.rooms;
-  end if;
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'room_players'
-  ) then
-    alter publication supabase_realtime add table public.room_players;
-  end if;
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'room_guesses'
-  ) then
-    alter publication supabase_realtime add table public.room_guesses;
-  end if;
-  if not exists (
-    select 1 from pg_publication_tables
-    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'room_results'
-  ) then
-    alter publication supabase_realtime add table public.room_results;
-  end if;
-end $$;
+-- ── REALTIME CONFIGURATION ────────────────────────────────────────────────
+-- Ensure all tables are part of the realtime publication
+alter publication supabase_realtime add table public.rooms;
+alter publication supabase_realtime add table public.room_players;
+alter publication supabase_realtime add table public.room_guesses;
+alter publication supabase_realtime add table public.room_results;

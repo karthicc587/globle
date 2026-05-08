@@ -323,27 +323,96 @@ async function loadRoomSnapshot(roomId) {
   setLobbyButtonsState();
 }
 
+/**
+ * Rewritten subscribeRoom to support "Quick Play" (Rematch) auto-joining.
+ * Listens for the 'next_room_id' update to chain game sessions.
+ */
 async function subscribeRoom(roomId) {
   if (!mpClient) return;
+
+  // Cleanup existing channel if it exists
   if (mpChannel) {
     await mpClient.removeChannel(mpChannel);
     mpChannel = null;
   }
 
   mpChannel = mpClient.channel(`room:${roomId}`)
-    .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, async () => {
+    // 1. Listen for room updates (specifically checking for Rematch/Quick Play)
+    .on("postgres_changes", { 
+      event: "UPDATE", 
+      schema: "public", 
+      table: "rooms", 
+      filter: `id=eq.${roomId}` 
+    }, async (payload) => {
+      const updatedRoom = payload.new;
+      
+      // If a next_room_id is present, move both players to the new room automatically
+      if (updatedRoom.next_room_id && updatedRoom.next_room_id !== mpRoom?.id) {
+        setMultiplayerStatus("Joining next round...");
+        await joinRoomInternal(updatedRoom.next_room_id, true);
+        return;
+      }
+
       await loadRoomSnapshot(roomId);
       await handleRoomState();
     })
-    .on("postgres_changes", { event: "*", schema: "public", table: "room_players", filter: `room_id=eq.${roomId}` }, async () => {
+    // 2. Listen for other room events (initial join/activation)
+    .on("postgres_changes", { 
+      event: "INSERT", 
+      schema: "public", 
+      table: "rooms", 
+      filter: `id=eq.${roomId}` 
+    }, async () => {
       await loadRoomSnapshot(roomId);
       await handleRoomState();
     })
-    .on("postgres_changes", { event: "*", schema: "public", table: "room_results", filter: `room_id=eq.${roomId}` }, async () => {
+    // 3. Listen for player status changes (Ready/Leave)
+    .on("postgres_changes", { 
+      event: "*", 
+      schema: "public", 
+      table: "room_players", 
+      filter: `room_id=eq.${roomId}` 
+    }, async () => {
+      await loadRoomSnapshot(roomId);
+      await handleRoomState();
+    })
+    // 4. Listen for game completion results
+    .on("postgres_changes", { 
+      event: "*", 
+      schema: "public", 
+      table: "room_results", 
+      filter: `room_id=eq.${roomId}` 
+    }, async () => {
       await loadRoomSnapshot(roomId);
       maybeShowMultiplayerResults();
     })
+    // 5. Listen for rematch request
+
+    .on("postgres_changes", { 
+    event: "UPDATE", 
+    schema: "public", 
+    table: "rooms", 
+    filter: `id=eq.${roomId}` 
+  }, async (payload) => {
+    const updatedRoom = payload.new;
+    
+    if (updatedRoom.next_room_id && updatedRoom.next_room_id !== mpRoom?.id) {
+      // SYNCED HIDE: This clears the win message for the player who DIDN'T click the button
+      const winMsg = document.getElementById("win-message");
+      if (winMsg) winMsg.style.display = "none";
+      
+      setMultiplayerStatus("Opponent requested rematch... joining!");
+      await joinRoomInternal(updatedRoom.next_room_id, true);
+      return;
+    }
+
+      await loadRoomSnapshot(roomId);
+      await handleRoomState();
+    })
+
     .subscribe();
+
+    
 }
 
 function getMyPlayerId() {
@@ -767,6 +836,12 @@ function maybeShowMultiplayerResults() {
   const verdict = winner ? (winner === myId ? "You win!" : "You lose.") : "Tie game.";
   const winMsg = document.getElementById("win-message");
   const winText = document.getElementById("win-text");
+  // Inside maybeShowMultiplayerResults()
+  const rematchBtn = document.getElementById("mp-rematch-btn");
+    if (rematchBtn) {
+      rematchBtn.style.display = "block";
+      rematchBtn.onclick = requestRematch;
+    }
   if (!winMsg || !winText) return;
   winMsg.style.display = "block";
 
@@ -845,6 +920,45 @@ async function handleMultiplayerPlayAgain() {
   const winMsg = document.getElementById("win-message");
   if (winMsg) winMsg.style.display = "none";
   location.reload();
+}
+
+async function requestRematch() {
+  if (!mpRoom || !mpClient) return;
+
+  document.getElementById("win-message").style.display = "none";
+  setMultiplayerStatus("Creating next round...");
+
+  try {
+    const newRoomId = buildRoomCode();
+    const playerId = getMyPlayerId();
+
+    // 1. Create the new room (inheriting current mode)
+    await mpClient.from("rooms").insert({
+      id: newRoomId,
+      created_by: playerId,
+      status: "waiting",
+      mode: mpGameMode
+    });
+
+    // 2. Join the new room ourselves
+    await mpClient.from("room_players").insert({
+      room_id: newRoomId,
+      player_id: playerId,
+      display_name: getDisplayName(),
+      is_ready: false
+    });
+
+    // 3. Update OLD room with the new ID so opponent can see it
+    await mpClient.from("rooms")
+      .update({ next_room_id: newRoomId })
+      .eq("id", mpRoom.id);
+
+    // 4. Switch our local client to the new room
+    await joinRoomInternal(newRoomId, false);
+    
+  } catch (error) {
+    setMultiplayerStatus("Rematch failed: " + error.message, true);
+  }
 }
 
 async function initMultiplayerMode(mode = "globle") {

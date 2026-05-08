@@ -103,3 +103,22 @@ alter publication supabase_realtime add table public.rooms;
 alter publication supabase_realtime add table public.room_players;
 alter publication supabase_realtime add table public.room_guesses;
 alter publication supabase_realtime add table public.room_results;
+
+-- ── Introduced a function to delete empty rooms after 24hrs ────────────────────────────────────────────────
+
+-- 1. Create the function
+create or replace function delete_expired_rooms()
+returns void
+language sql
+security definer
+as $$
+  delete from public.rooms
+  where expires_at < now();
+$$;
+
+-- 2. Schedule the function
+select cron.schedule(
+  'cleanup-expired-rooms-task', 
+  '0 * * * *',                  
+  'select delete_expired_rooms();'
+);

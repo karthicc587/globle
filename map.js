@@ -36,7 +36,7 @@ let rotationActive = true;
 let resumeTimer = null;
 let currentBaseScale = 0;
 
-const ROTATION_RESUME_DELAY = 5000;
+const ROTATION_RESUME_DELAY = 10000;
 const INITIAL_SCALE_FACTOR = 2.2;
 
 /**

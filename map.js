@@ -163,7 +163,7 @@ function updateOpponentMap(iso3, color) {
   oppSvg.selectAll(".opp-country")
     .filter(d => d.iso3 === iso3)
     .transition().duration(500)
-    .style("fill", color)
+    .style("fill", "#8b5cf6") // The same purple as the opponent's progress bar
     .style("stroke", "white")
     .style("stroke-width", "0.5");
 }

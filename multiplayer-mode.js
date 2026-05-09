@@ -647,11 +647,31 @@ async function handleRoomState() {
 
 async function submitMultiplayerGuess() {
   if (!mpClient || !mpRoom || mpRoom.status !== "active" || mpRoundWon) return;
+  
   const input = document.getElementById("country-input");
-  const iso3 = resolveCountry((input?.value || "").trim());
-  if (!iso3 || mpGuessedSet.has(iso3)) return;
-  if (!mpTargetIso3) {
-    setErrorMessage("Round has not started yet.");
+  const rawInput = (input?.value || "").trim();
+  const iso3 = resolveCountry(rawInput);
+
+  // 1. Check if the country exists in our data set
+  if (!iso3 || !COUNTRY_DATA[iso3]) {
+    if (rawInput !== "") {
+      setErrorMessage(`"${rawInput}" is not a recognized country.`);
+      SoundManager.playError();
+    }
+    return;
+  }
+
+  // 2. Prevent duplicate guesses
+  if (mpGuessedSet.has(iso3)) {
+    setErrorMessage(`You have already guessed ${COUNTRY_DATA[iso3].name}.`);
+    SoundManager.playError();
+    return;
+  }
+
+  // 3. Ensure target is loaded
+  if (!mpTargetIso3 || !COUNTRY_DATA[mpTargetIso3]) {
+    setErrorMessage("Target country data is missing. Please restart.");
+    SoundManager.playError();
     return;
   }
 
@@ -659,22 +679,28 @@ async function submitMultiplayerGuess() {
   let dist = 0;
   let arrow = "➡️";
   let solved = false;
-  let gaveUp = false;
+  const gaveUp = false;
 
   try {
+    // Mode-Specific Validation
     if (mpGameMode === "path") {
       const lastCountry = mpPathChain[mpPathChain.length - 1];
       const neighbors = NEIGHBOR_DATA[lastCountry] || [];
+
       if (iso3 === lastCountry) {
         setErrorMessage("You are already here.");
+        SoundManager.playError();
         return;
       }
       if (!neighbors.includes(iso3)) {
         setErrorMessage(`${COUNTRY_DATA[iso3].name} does not border ${COUNTRY_DATA[lastCountry].name}.`);
+        SoundManager.playError();
         return;
       }
+      // Redundant check for path mode safety
       if (mpPathChain.includes(iso3)) {
         setErrorMessage("Already visited this country in your chain.");
+        SoundManager.playError();
         return;
       }
     } else {
@@ -684,6 +710,7 @@ async function submitMultiplayerGuess() {
       arrow = getBearingArrow(guessed.lat, guessed.lng, target.lat, target.lng);
     }
 
+    // Database Update
     const insertRes = await mpClient.from("room_guesses").insert({
       room_id: mpRoom.id,
       player_id: getMyPlayerId(),
@@ -693,35 +720,49 @@ async function submitMultiplayerGuess() {
     });
     if (insertRes.error) throw insertRes.error;
 
+    // State & UI Updates
     mpGuessedSet.add(iso3);
+    solved = (iso3 === mpTargetIso3);
+
     if (mpGameMode === "path") {
       mpPathChain.push(iso3);
-      solved = iso3 === mpTargetIso3;
       renderPathMultiplayerMap();
     } else {
       const guessed = COUNTRY_DATA[iso3];
       mpGuesses.push({ iso3, name: guessed.name, dist, color: distToColor(dist), arrow });
-      solved = iso3 === mpTargetIso3;
+      
+      // Update globe color
       gSel.selectAll(".country").filter(d => d.iso3 === iso3)
         .classed("guessed", true)
         .transition().duration(500)
         .style("fill", distToColor(dist));
     }
+
+    // Visual & Audio Feedback
     input.value = "";
     rotateToCountry(iso3);
-
     renderMultiplayerGuesses();
 
     if (solved) {
+      SoundManager.playSuccess();
       await finishMultiplayerRound(true, gaveUp);
+    } else {
+      SoundManager.playMove();
     }
+
   } catch (error) {
     setMultiplayerStatus(`Guess failed: ${error.message}`, true);
+    SoundManager.playError();
   }
 }
 
 async function finishMultiplayerRound(won, gaveUp) {
   if (!mpClient || !mpRoom || mpRoundWon) return;
+
+  if (gaveUp) {
+      SoundManager.playGiveUp();
+    }
+
   mpRoundWon = true;
   const durationMs = Math.max(Date.now() - mpRoundStartMs, 0);
 

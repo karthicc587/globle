@@ -36,8 +36,10 @@ function submitGlobleGuess() {
   const input = document.getElementById("country-input");
   const iso3 = resolveCountry(input.value.trim());
 
-  if (!iso3 || guessedSet.has(iso3) || won) return;
-
+  if (!iso3 || guessedSet.has(iso3) || won) {
+    SoundManager.playError();
+    return;
+  }
   const target = COUNTRY_DATA[TARGET_ISO3];
   const guessed = COUNTRY_DATA[iso3];
   
@@ -59,7 +61,10 @@ function submitGlobleGuess() {
   input.value = "";
   rotateToCountry(iso3);
   if (iso3 === TARGET_ISO3) {
+    SoundManager.playSuccess();
     handleGlobleWin();
+  } else {
+    SoundManager.playMove();
   }
 }
 
@@ -84,6 +89,7 @@ function handleGlobleWin() {
 
 function giveUp() {
   if (won) return;
+  SoundManager.playGiveUp();
   won = true;
   rotationActive = false;
   

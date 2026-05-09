@@ -67,8 +67,10 @@ function submitPathGuess() {
     input.value = "";
     
     if (iso3 === PATH_TARGET_ISO3) {
+      SoundManager.playSuccess();
       handlePathWin();
     } else {
+      SoundManager.playMove();
       updatePathUI();
       renderPathOnMap();
       rotateToCountry(iso3);
@@ -99,7 +101,7 @@ function handlePathWin() {
 
 function handlePathGiveUp() {
   if (pathWon) return; // Don't trigger if they already won
-  
+  SoundManager.playGiveUp();
   pathWon = true; // Stop further guesses
   const optimalPath = getPathBFS(PATH_START_ISO3, PATH_TARGET_ISO3);
   recordGameResult(COUNTRY_DATA[PATH_TARGET_ISO3].name, currentChain.length - 1, false);
@@ -215,6 +217,7 @@ function getPathBFS(start, target) {
 }
 
 function showPathError(msg) {
+  SoundManager.playError();
   const err = document.getElementById("error-msg");
   err.textContent = msg;
   setTimeout(() => { if(err.textContent === msg) err.textContent = ""; }, 3000);

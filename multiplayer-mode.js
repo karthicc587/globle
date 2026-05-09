@@ -861,8 +861,8 @@ async function finishMultiplayerRound(won, gaveUp) {
   if (!mpClient || !mpRoom || mpRoundWon) return;
 
   if (gaveUp) {
-      SoundManager.playGiveUp();
-    }
+    SoundManager.playGiveUp();
+  }
 
   mpRoundWon = true;
   const durationMs = Math.max(Date.now() - mpRoundStartMs, 0);
@@ -877,6 +877,7 @@ async function finishMultiplayerRound(won, gaveUp) {
       gave_up: gaveUp,
       completed_at: new Date().toISOString()
     };
+
     const upsertRes = await mpClient.from("room_results").upsert(resultPayload, {
       onConflict: "room_id,player_id"
     });
@@ -891,20 +892,40 @@ async function finishMultiplayerRound(won, gaveUp) {
       .eq("player_id", getMyPlayerId());
     if (playerUpdateRes.error) throw playerUpdateRes.error;
 
+    // UI State Cleanup
     document.getElementById("country-input").disabled = true;
     document.getElementById("guess-btn").disabled = true;
     document.getElementById("give-up-btn").disabled = true;
-    if (gaveUp) rotateToCountry(mpTargetIso3);
+
+    // ─── Post-Game Visual Logic ───
+    if (gaveUp) {
+      if (mpGameMode === "globle" && mpTargetIso3) {
+        const winningRed = distToColor(0); // Matches the win color from single-player logic
+
+        // Highlight the missed target so the player sees exactly where it was
+        gSel.selectAll(".country").filter(d => d.iso3 === mpTargetIso3)
+          .classed("guessed", true)
+          .transition().duration(500)
+          .style("fill", winningRed);
+      }
+      
+      // Swing the globe over to reveal the target location
+      rotateToCountry(mpTargetIso3);
+    }
+
     if (mpGameMode === "path") {
       const optimalPath = getPathBFS(mpPathStartIso3, mpTargetIso3);
       if (optimalPath.length > 0) {
         renderPathMultiplayerMap(optimalPath);
       }
     }
+
     showMultiplayerPendingResult(won, gaveUp);
 
+    // Snapshot update to check if we trigger the final room state
     await loadRoomSnapshot(mpRoom.id);
     const bothDone = mpResults.length >= 2;
+    
     if (bothDone) {
       const roomFinishRes = await mpClient.from("rooms")
         .update({ status: "finished", finished_at: new Date().toISOString() })

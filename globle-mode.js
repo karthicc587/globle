@@ -105,10 +105,12 @@ function giveUp() {
   document.getElementById("country-input").disabled = true;
   document.getElementById("guess-btn").disabled = true;
   
-  // Highlight target in Amber
+  const winningRed = distToColor(0);
+
   gSel.selectAll(".country").filter(d => d.iso3 === TARGET_ISO3)
-    .classed("target", true)
-    .transition().duration(500).style("fill", "#fbbf24");
+    .classed("guessed", true) // Use 'guessed' instead of 'target' for the white border
+    .transition().duration(500)
+    .style("fill", winningRed);
     
   rotateToCountry(TARGET_ISO3);
 }

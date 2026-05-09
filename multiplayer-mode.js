@@ -18,6 +18,9 @@ let mpRoundStartMs = 0;
 let mpRoundWon = false;
 let mpUiEventsBound = false;
 let mpGameMode = "globle";
+let mpIsCollaborative = false;
+let mpCurrentTurnId = null;
+let mpHasSuggestedThisTurn = false; 
 
 function getSupabaseConfig() {
   return {
@@ -418,7 +421,15 @@ async function subscribeRoom(roomId) {
   mpChannel = mpClient.channel(`room:${roomId}`)
 
     // multiplayer-mode.js inside subscribeRoom()
+    //listen for suggestion guess
+    .on("broadcast", { event: "suggestion" }, (payload) => {
+    const { iso3, player_id } = payload.payload;
+    if (player_id !== getMyPlayerId()) {
+        showSuggestionOnMap(iso3);
+    }
+})
     //0. Listen for opponent guesses
+
     .on("postgres_changes", { 
       event: "INSERT", 
       schema: "public", 
@@ -426,12 +437,46 @@ async function subscribeRoom(roomId) {
       filter: `room_id=eq.${roomId}` 
     }, (payload) => {
       const newGuess = payload.new;
+      if (mpIsCollaborative) {
+    // BOTH players update their main globe
+    const dist = newGuess.distance_km;
+    const iso3 = newGuess.iso3;
+    
+    // Clear any lingering purple suggestions
+    gSel.selectAll(".country").filter(d => d.iso3 === iso3).style("fill", null);
+
+    gSel.selectAll(".country").filter(d => d.iso3 === iso3)
+      .classed("guessed", true)
+      .transition().duration(500)
+      .style("fill", distToColor(dist));
+      
+    rotateToCountry(iso3);
+    
+    // Refresh the local guess list to show the partner's move
+    if (newGuess.player_id !== getMyPlayerId()) {
+       // Optionally add to local mpGuesses array if not already there
+       if (!mpGuessedSet.has(iso3)) {
+         const country = COUNTRY_DATA[iso3];
+         mpGuesses.push({ 
+           iso3, 
+           name: country.name, 
+           dist, 
+           color: distToColor(dist), 
+           arrow: getBearingArrow(country.lat, country.lng, COUNTRY_DATA[mpTargetIso3].lat, COUNTRY_DATA[mpTargetIso3].lng) 
+         });
+         mpGuessedSet.add(iso3);
+         renderMultiplayerGuesses();
+       }
+    }
+  } else {
+
       updateRaceProgress(newGuess.player_id, newGuess.distance_km);
 
       if (newGuess.player_id !== getMyPlayerId()) {
         SoundManager.playOpponentMove();
         updateOpponentMap(newGuess.iso3, distToColor(newGuess.distance_km));
       }
+    }
     })
 
     // 1. Listen for room updates (specifically checking for Rematch/Quick Play)
@@ -443,6 +488,10 @@ async function subscribeRoom(roomId) {
     }, async (payload) => {
       const updatedRoom = payload.new;
       
+      mpIsCollaborative = updatedRoom.is_collaborative;
+      mpCurrentTurnId = updatedRoom.current_turn_player_id;
+      updateCollabUI();
+
       // If a next_room_id is present, move both players to the new room automatically
       if (updatedRoom.next_room_id && updatedRoom.next_room_id !== mpRoom?.id) {
         setMultiplayerStatus("Joining next round...");
@@ -618,9 +667,10 @@ async function maybeStartRound() {
 
   // Any client can attempt this; the WHERE guard ensures only one succeeds.
   const startPayload = {
-    status: "active",
-    started_at: new Date().toISOString(),
-    finished_at: null
+      status: "active",
+      started_at: new Date().toISOString(),
+      is_collaborative: document.getElementById("collab-toggle").checked,
+      current_turn_player_id: livePlayers[0].player_id // First player starts
   };
   if ((liveRoom.mode || "globle") === "path") {
     const pair = getPathModePair();
@@ -772,6 +822,17 @@ async function submitMultiplayerGuess() {
   const rawInput = (input?.value || "").trim();
   const iso3 = resolveCountry(rawInput);
 
+  const myId = getMyPlayerId();
+  // COLLABORATIVE LOGIC
+  if (mpIsCollaborative) {
+    if (mpCurrentTurnId !== myId) {
+      // It's a suggestion!
+      sendSuggestion(iso3);
+      input.value = "";
+      return;
+    }
+  }
+
   // 1. Check if the country exists in our data set
   if (!iso3 || !COUNTRY_DATA[iso3]) {
     if (rawInput !== "") {
@@ -870,6 +931,13 @@ async function submitMultiplayerGuess() {
       SoundManager.playMove();
     }
 
+    if (mpIsCollaborative && !solved) {
+      const nextPlayer = mpPlayers.find(p => p.player_id !== myId)?.player_id;
+      await mpClient.from("rooms")
+        .update({ current_turn_player_id: nextPlayer })
+        .eq("id", mpRoom.id);
+  }
+
   } catch (error) {
     setMultiplayerStatus(`Guess failed: ${error.message}`, true);
     SoundManager.playError();
@@ -879,89 +947,65 @@ async function submitMultiplayerGuess() {
 async function finishMultiplayerRound(won, gaveUp) {
   if (!mpClient || !mpRoom || mpRoundWon) return;
 
-  if (gaveUp) {
-    SoundManager.playGiveUp();
-  }
-
+  if (gaveUp) SoundManager.playGiveUp();
   mpRoundWon = true;
+
   const durationMs = Math.max(Date.now() - mpRoundStartMs, 0);
+  const guessCount = mpGameMode === "path" ? Math.max(mpPathChain.length - 1, 0) : mpGuesses.length;
 
   try {
-    const resultPayload = {
-      room_id: mpRoom.id,
-      player_id: getMyPlayerId(),
-      guess_count: mpGameMode === "path" ? Math.max(mpPathChain.length - 1, 0) : mpGuesses.length,
-      duration_ms: durationMs,
-      won,
-      gave_up: gaveUp,
-      completed_at: new Date().toISOString()
-    };
+    // 1. Prepare results for BOTH players if collaborative
+    const playersToRecord = mpIsCollaborative ? mpPlayers.map(p => p.player_id) : [getMyPlayerId()];
 
-    const upsertRes = await mpClient.from("room_results").upsert(resultPayload, {
-      onConflict: "room_id,player_id"
+    const resultPromises = playersToRecord.map(pid => {
+      return mpClient.from("room_results").upsert({
+        room_id: mpRoom.id,
+        player_id: pid,
+        guess_count: guessCount,
+        duration_ms: durationMs,
+        won,
+        gave_up: gaveUp,
+        completed_at: new Date().toISOString()
+      });
     });
-    if (upsertRes.error) throw upsertRes.error;
 
-    const playerUpdateRes = await mpClient.from("room_players")
-      .update({
-        finished_at: new Date().toISOString(),
-        gave_up: gaveUp
+    await Promise.all(resultPromises);
+
+    // 2. Mark the room as finished immediately for everyone
+    await mpClient.from("rooms")
+      .update({ 
+        status: "finished", 
+        finished_at: new Date().toISOString() 
       })
-      .eq("room_id", mpRoom.id)
-      .eq("player_id", getMyPlayerId());
-    if (playerUpdateRes.error) throw playerUpdateRes.error;
+      .eq("id", mpRoom.id);
 
-    // UI State Cleanup
+    // 3. UI Cleanup
     document.getElementById("country-input").disabled = true;
     document.getElementById("guess-btn").disabled = true;
     document.getElementById("give-up-btn").disabled = true;
 
-    // ─── Post-Game Visual Logic ───
-    if (gaveUp) {
-      if (mpGameMode === "globle" && mpTargetIso3) {
-        const winningRed = distToColor(0); // Matches the win color from single-player logic
-
-        // Highlight the missed target so the player sees exactly where it was
-        gSel.selectAll(".country").filter(d => d.iso3 === mpTargetIso3)
-          .classed("guessed", true)
-          .transition().duration(500)
-          .style("fill", winningRed);
-      }
-      
-      // Swing the globe over to reveal the target location
+    if (gaveUp || won) {
       rotateToCountry(mpTargetIso3);
-    }
-
-    if (mpGameMode === "path") {
-      const optimalPath = getPathBFS(mpPathStartIso3, mpTargetIso3);
-      if (optimalPath.length > 0) {
-        renderPathMultiplayerMap(optimalPath);
+      if (mpGameMode === "path") {
+        renderPathOnMap(getPathBFS(mpPathStartIso3, mpTargetIso3));
       }
-    }
-
-    showMultiplayerPendingResult(won, gaveUp);
-
-    // Snapshot update to check if we trigger the final room state
-    await loadRoomSnapshot(mpRoom.id);
-    const bothDone = mpResults.length >= 2;
-    
-    if (bothDone) {
-      const roomFinishRes = await mpClient.from("rooms")
-        .update({ status: "finished", finished_at: new Date().toISOString() })
-        .eq("id", mpRoom.id)
-        .neq("status", "finished");
-      if (roomFinishRes.error) throw roomFinishRes.error;
-    } else {
-      setMultiplayerStatus("Round submitted. Waiting for opponent.");
     }
   } catch (error) {
-    setMultiplayerStatus(`Round finish failed: ${error.message}`, true);
+    setMultiplayerStatus(`End game failed: ${error.message}`, true);
   }
 }
 
 async function handleMultiplayerGiveUp() {
   if (!mpRoom || mpRoom.status !== "active") return;
-  await finishMultiplayerRound(false, true);
+
+  if (mpIsCollaborative) {
+    if (confirm("Give up on this round for both players?")) {
+      await finishMultiplayerRound(false, true);
+    }
+  } else {
+    // Standard competitive behavior
+    await finishMultiplayerRound(false, true);
+  }
 }
 
 function showMultiplayerPendingResult(won, gaveUp) {
@@ -1003,38 +1047,62 @@ function computeWinner(results) {
 }
 
 function maybeShowMultiplayerResults() {
-  if (!mpRoom || mpResults.length < 2) return;
+  // Guard clause: Collaborative needs at least 1 result, Competitive needs 2.
+  const requiredResults = mpIsCollaborative ? 1 : 2;
+  if (!mpRoom || mpResults.length < requiredResults) return;
+
   revealOpponentGuesses();
+
   const isPathMode = (mpRoom.mode || mpGameMode) === "path";
   const unit = isPathMode ? "steps" : "guesses";
   const optimalPath = isPathMode ? getPathBFS(mpPathStartIso3, mpTargetIso3) : [];
   const optimalLine = isPathMode && optimalPath.length > 0
     ? `<small>(Shortest possible was ${Math.max(optimalPath.length - 1, 0)} steps)</small><br>`
     : "";
-  const winner = computeWinner(mpResults);
-  const myId = getMyPlayerId();
-  const [a, b] = mpResults;
-  const findName = (id) => mpPlayers.find(p => p.player_id === id)?.display_name || "Player";
 
-  const verdict = winner ? (winner === myId ? "You win!" : "You lose.") : "Tie game.";
   const winMsg = document.getElementById("win-message");
   const winText = document.getElementById("win-text");
-  // Inside maybeShowMultiplayerResults()
   const rematchBtn = document.getElementById("mp-rematch-btn");
-    if (rematchBtn) {
-      rematchBtn.style.display = "block";
-      rematchBtn.onclick = requestRematch;
-    }
+
   if (!winMsg || !winText) return;
   winMsg.style.display = "block";
 
-  winText.innerHTML = `
-    <strong>${verdict}</strong><br>
-    ${findName(a.player_id)}: ${a.won ? "Solved" : "Gave up"} in ${a.guess_count} ${unit} (${formatDuration(a.duration_ms)})<br>
-    ${findName(b.player_id)}: ${b.won ? "Solved" : "Gave up"} in ${b.guess_count} ${unit} (${formatDuration(b.duration_ms)})<br>
-    ${optimalLine}
-  `;
-  setMultiplayerStatus("Both players finished.");
+  // Handle Rematch Button
+  if (rematchBtn) {
+    rematchBtn.style.display = "block";
+    rematchBtn.onclick = requestRematch;
+  }
+
+  if (mpIsCollaborative) {
+    // ─── COLLABORATIVE UI ───
+    const res = mpResults[0]; // Both players share the same result data
+    const status = res.won ? "🎉 Team Victory!" : "😢 Team Gave Up";
+    
+    winText.innerHTML = `
+      <strong>${status}</strong><br>
+      You worked together to finish in ${res.guess_count} ${unit}.<br>
+      Time: ${formatDuration(res.duration_ms)}<br>
+      ${optimalLine}
+    `;
+    setMultiplayerStatus("Collaboration complete!");
+
+  } else {
+    // ─── COMPETITIVE UI ───
+    const winner = computeWinner(mpResults);
+    const myId = getMyPlayerId();
+    const [a, b] = mpResults;
+    const findName = (id) => mpPlayers.find(p => p.player_id === id)?.display_name || "Player";
+
+    const verdict = winner ? (winner === myId ? "You win!" : "You lose.") : "Tie game.";
+
+    winText.innerHTML = `
+      <strong>${verdict}</strong><br>
+      ${findName(a.player_id)}: ${a.won ? "Solved" : "Gave up"} in ${a.guess_count} ${unit} (${formatDuration(a.duration_ms)})<br>
+      ${findName(b.player_id)}: ${b.won ? "Solved" : "Gave up"} in ${b.guess_count} ${unit} (${formatDuration(b.duration_ms)})<br>
+      ${optimalLine}
+    `;
+    setMultiplayerStatus("Both players finished.");
+  }
 }
 
 async function shareMultiplayerResults() {
@@ -1105,6 +1173,52 @@ async function handleMultiplayerPlayAgain() {
   location.reload();
 }
 
+function showSuggestionOnMap(iso3) {
+    const color = "#8b5cf6"; // Purple
+    gSel.selectAll(".country").filter(d => d.iso3 === iso3)
+      .transition().duration(200).style("fill", color)
+      .transition().duration(200).style("fill", "#334155")
+      .transition().duration(200).style("fill", color); // Quick double flash
+      
+    setMultiplayerStatus(`Partner suggests: ${COUNTRY_DATA[iso3].name}`);
+}
+
+function updateCollabUI() {
+  const myId = getMyPlayerId();
+  const raceTrack = document.getElementById("race-track");
+  const opponentPip = document.getElementById("opponent-pip");
+  const statusEl = document.getElementById("mp-status");
+
+  if (mpIsCollaborative) {
+    // 1. Turn off competitive UI
+    if (raceTrack) raceTrack.style.display = "none";
+    if (opponentPip) opponentPip.style.display = "none";
+
+    if (mpCurrentTurnId === myId) {
+      statusEl.textContent = "🤝 Collaborative: YOUR TURN";
+      statusEl.style.color = "#10b981";
+      mpHasSuggestedThisTurn = false; // Reset lock when it becomes your turn
+    } else {
+      statusEl.textContent = "🤝 Collaborative: Partner's Turn (Type to suggest)";
+      statusEl.style.color = "#8b5cf6";
+    }
+  } else {
+    // Restore UI if mode switches back
+    if (raceTrack) raceTrack.style.display = "block";
+    if (opponentPip) opponentPip.style.display = "block";
+  }
+
+if (gSel) {
+    gSel.selectAll(".country")
+      .filter(function() { 
+        return d3.select(this).style("fill") === "rgb(139, 92, 246)"; // Check for #8b5cf6
+      })
+      .transition().duration(300)
+      .style("fill", null);
+  }
+
+}
+
 async function requestRematch() {
   if (!mpRoom || !mpClient) return;
 
@@ -1142,6 +1256,22 @@ async function requestRematch() {
   } catch (error) {
     setMultiplayerStatus("Rematch failed: " + error.message, true);
   }
+}
+
+async function sendSuggestion(iso3) {
+  if (mpHasSuggestedThisTurn) {
+    setErrorMessage("You can only send one suggestion per turn.");
+    return;
+  }
+
+  mpChannel.send({
+    type: 'broadcast',
+    event: 'suggestion',
+    payload: { iso3, player_id: getMyPlayerId() }
+  });
+
+  mpHasSuggestedThisTurn = true; // Lock suggestions
+  setErrorMessage("Suggestion sent to partner!");
 }
 
 async function initMultiplayerMode(mode = "globle") {

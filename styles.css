@@ -186,6 +186,8 @@ button {
   font-size: 12px;
   color: #bfdbfe;
   min-height: 1.1em;
+  font-weight: bold;
+  transition: color 0.3s ease;
 }
 
 .mp-room-meta {

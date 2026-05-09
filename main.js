@@ -145,6 +145,12 @@ document.getElementById("borders-toggle").addEventListener("change", (e) => {
  * visibility of multiplayer-specific elements.
  */
 function applyModeUI(mode, multiplayerEnabled) {
+
+  const collabToggle = document.getElementById("collab-toggle-wrapper");
+  if (collabToggle) {
+      collabToggle.style.display = multiplayerEnabled ? "grid" : "none";
+  }
+  
   const modeLinkContainer = document.getElementById("mode-links");
   
   if (modeLinkContainer) {

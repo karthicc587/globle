@@ -122,3 +122,7 @@ select cron.schedule(
   '0 * * * *',                  
   'select delete_expired_rooms();'
 );
+-- Introduced collaborative mode
+ALTER TABLE public.rooms 
+ADD COLUMN is_collaborative BOOLEAN DEFAULT false,
+ADD COLUMN current_turn_player_id UUID;

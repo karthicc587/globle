@@ -698,8 +698,27 @@ function activateRound() {
   const oppList = document.getElementById("opponent-guess-list");
   if (oppList) oppList.innerHTML = "";
   
+  // ─── RESET VISUALS FOR REMATCH ───
+  // 1. Reset Progress Bar positions to 0%
+  const pProg = document.getElementById("player-progress");
+  const oProg = document.getElementById("opponent-progress");
+  if (pProg) pProg.style.left = "0%";
+  if (oProg) oProg.style.left = "0%";
+
+  // 2. Reset Opponent Mini-Map (Clears colors and recenters)
+  if (oppSvg) {
+    oppSvg.selectAll(".opp-country")
+      .transition().duration(500)
+      .style("fill", "#334155")
+      .style("stroke", "#0f172a")
+      .style("stroke-width", "0.2");
+  }
+  // ────────────────────────────────
+
   clearMapColors();
   rotateToCountry(mpGameMode === "path" && mpPathStartIso3 ? mpPathStartIso3 : mpTargetIso3);
+  
+  // ... rest of the function remains the same ...
   document.getElementById("country-input").disabled = false;
   document.getElementById("guess-btn").disabled = false;
   document.getElementById("give-up-btn").disabled = false;

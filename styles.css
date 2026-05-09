@@ -304,6 +304,67 @@ svg { width: 100%; height: 100%; }
   stroke-width: 2.5px !important;
   stroke-dasharray: 2, 2; /* Optional: Makes it a dashed line for a "map route" look */
 }
+/* ─── Race Track at Top ──────────────────────────────────────────────────────────── */
+.race-track {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  z-index: 10;
+}
+
+.progress-marker {
+  position: absolute;
+  top: -25px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#player-progress { background: #3b82f6; left: 0%; }
+#opponent-progress { background: #8b5cf6; left: 0%; }
+
+/* Mini-Map PiP */
+#opponent-pip {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 180px;
+  height: 180px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid #334155;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+}
+
+.pip-label {
+  position: absolute;
+  top: 10px;
+  width: 100%;
+  text-align: center;
+  font-size: 9px;
+  color: #ffffff; /* Brighter white for better contrast */
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: bold;
+  
+  /* CRITICAL FIXES */
+  z-index: 20; /* Ensure it stays above the SVG globe */
+  pointer-events: none; /* Let clicks pass through to the map if needed */
+  
+  /* Add a subtle dark glow/shadow so it's readable over light-colored guesses */
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 1);
+  
+  /* Optional: Add a slight backdrop blur to make the text pop */
+  background: rgba(15, 23, 42, 0.4); 
+  padding: 4px 0;
+}
 
 /* ─── Tooltip ──────────────────────────────────────────────────────────── */
 #tooltip {

@@ -31,6 +31,7 @@ const NUMERIC_TO_ISO3 = {
 
 // ─── State & Variables ──────────────────────────────────────────────────────
 let projection, pathFn, svgSel, gSel;
+let oppProjection, oppPathFn, oppSvg;
 let geoFeatures = [];
 let rotationActive = true;
 let resumeTimer = null;
@@ -100,6 +101,71 @@ async function initGlobe(wrapperId = "map-wrapper", svgId = "map") {
 
   renderCountries();
   applyBordersToggle();
+}
+
+async function initOpponentGlobe() {
+  const container = document.getElementById("opponent-pip");
+  if (!container) return;
+
+  const w = container.clientWidth, h = container.clientHeight;
+  
+  // FIX: If width is 0 (can happen if container is hidden), use a fallback
+  const width = w || 180;
+  const height = h || 180;
+
+  oppProjection = d3.geoOrthographic()
+    .scale(width / 2.2)
+    .translate([width / 2, height / 2])
+    .clipAngle(90);
+
+  oppPathFn = d3.geoPath().projection(oppProjection);
+  oppSvg = d3.select("#opponent-map")
+    .attr("width", width)
+    .attr("height", height);
+
+  // Clear any existing content
+  oppSvg.selectAll("*").remove();
+
+  // Draw the ocean
+  oppSvg.append("path")
+    .datum({ type: "Sphere" })
+    .attr("class", "sphere")
+    .attr("d", oppPathFn)
+    .style("fill", "#1e293b");
+
+  // FIX: Ensure we use the global geoFeatures loaded in the main initGlobe()
+  if (geoFeatures && geoFeatures.length > 0) {
+    oppSvg.append("g")
+      .selectAll(".opp-country")
+      .data(geoFeatures)
+      .join("path")
+      .attr("class", "opp-country")
+      .attr("d", oppPathFn)
+      .style("fill", "#334155")
+      .style("stroke", "#0f172a")
+      .style("stroke-width", "0.2");
+  }
+}
+
+function updateOpponentMap(iso3, color) {
+  if (!oppSvg || !oppProjection || !oppPathFn) return;
+  
+  const country = COUNTRY_DATA[iso3];
+  if (country) {
+    // 1. Update the rotation state
+    oppProjection.rotate([-country.lng, -country.lat]);
+    
+    // 2. CRITICAL: Tell D3 to redraw all paths using the new rotation
+    oppSvg.selectAll("path").attr("d", oppPathFn);
+  }
+
+  // 3. Highlight the specific country they just guessed
+  oppSvg.selectAll(".opp-country")
+    .filter(d => d.iso3 === iso3)
+    .transition().duration(500)
+    .style("fill", color)
+    .style("stroke", "white")
+    .style("stroke-width", "0.5");
 }
 
 /**

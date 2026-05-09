@@ -25,6 +25,11 @@ function getMultiplayerEnabled() {
 window.addEventListener('DOMContentLoaded', async () => {
   initializeStats();
   await initGlobe("map-wrapper", "map");
+
+  if (getMultiplayerEnabled()) {
+    await initOpponentGlobe(); 
+  }
+  
   setupSharedUIEvents();
 
   const mode = getActiveMode();

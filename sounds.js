@@ -62,5 +62,9 @@ const SoundManager = {
     this.playTone(330, 'triangle', 0.6, 0.1);
     // You can also layer a second lower tone for a "thud" effect
     setTimeout(() => this.playTone(165, 'sawtooth', 0.4, 0.05), 50);
-  }
+  }, 
+
+  playOpponentMove() {
+  this.playTone(660, 'sine', 0.1, 0.05); // Higher pitch, lower volume
+}
 };

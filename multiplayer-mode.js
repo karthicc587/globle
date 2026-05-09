@@ -196,6 +196,72 @@ function renderMultiplayerGuesses() {
     });
 }
 
+function renderOpponentGuess(guess) {
+  const list = document.getElementById("opponent-guess-list");
+  const item = document.createElement("div");
+  item.className = "guess-item opponent-guess";
+  
+  // We hide the name but show the distance/color
+  const color = distToColor(guess.distance_km);
+  
+  item.innerHTML = `
+    <span>#${guess.guess_index}</span>
+    <span>[Hidden]</span>
+    <span>${Math.round(guess.distance_km / 10) * 10} km</span>
+    <span class="g-swatch" style="background:${color}"></span>
+  `;
+  list.appendChild(item);
+
+  // Optional: Visual feedback on the globe
+  // Show a faint "ping" or marker where they guessed
+  // Note: This requires the guess object to include the lat/lng 
+  // or for you to look up the ISO3 color locally.
+  gSel.selectAll(".country").filter(d => d.iso3 === guess.iso3)
+    .style("outline", `2px solid ${color}`)
+    .style("outline-offset", "2px");
+}
+
+async function revealOpponentGuesses() {
+  if (!mpClient || !mpRoom) return;
+
+  // Fetch all guesses for this room from Supabase
+  const { data: allGuesses, error } = await mpClient
+    .from("room_guesses")
+    .select("*")
+    .eq("room_id", mpRoom.id)
+    .order("guess_index", { ascending: true });
+
+  if (error) {
+    console.error("Error revealing guesses:", error);
+    return;
+  }
+
+  const list = document.getElementById("opponent-guess-list");
+  if (!list) return;
+  list.innerHTML = ""; // Clear the [Hidden] rows
+
+  const myId = getMyPlayerId();
+  
+  allGuesses.forEach(g => {
+    // Only render guesses that belong to the opponent
+    if (g.player_id !== myId) {
+      const item = document.createElement("div");
+      item.className = "guess-item opponent-revealed";
+      
+      const countryName = COUNTRY_DATA[g.iso3]?.name || g.iso3;
+      const color = distToColor(g.distance_km);
+      
+      item.innerHTML = `
+        <span>#${g.guess_index}</span>
+        <span>${countryName}</span>
+        <span>${Math.round(g.distance_km / 10) * 10} km</span>
+        <span class="g-swatch" style="background:${color}"></span>
+      `;
+      list.appendChild(item);
+    }
+  });
+}
+
 function renderMultiplayerPathState() {
   const list = document.getElementById("guess-list");
   if (!list) return;
@@ -233,6 +299,19 @@ function renderMultiplayerPathState() {
     `;
     list.appendChild(item);
   });
+}
+
+function updateRaceProgress(playerId, distance) {
+  const maxDist = 15000; 
+  const progress = Math.max(0, Math.min(100, 100 - (distance / maxDist) * 100));
+  
+  const elementId = playerId === getMyPlayerId() ? "player-progress" : "opponent-progress";
+  const el = document.getElementById(elementId);
+  
+  if (el) {
+    // Ensure the percentage unit is attached
+    el.style.left = `${progress}%`; 
+  }
 }
 
 function bindMultiplayerUiEvents() {
@@ -337,6 +416,24 @@ async function subscribeRoom(roomId) {
   }
 
   mpChannel = mpClient.channel(`room:${roomId}`)
+
+    // multiplayer-mode.js inside subscribeRoom()
+    //0. Listen for opponent guesses
+    .on("postgres_changes", { 
+      event: "INSERT", 
+      schema: "public", 
+      table: "room_guesses", 
+      filter: `room_id=eq.${roomId}` 
+    }, (payload) => {
+      const newGuess = payload.new;
+      updateRaceProgress(newGuess.player_id, newGuess.distance_km);
+
+      if (newGuess.player_id !== getMyPlayerId()) {
+        SoundManager.playOpponentMove();
+        updateOpponentMap(newGuess.iso3, distToColor(newGuess.distance_km));
+      }
+    })
+
     // 1. Listen for room updates (specifically checking for Rematch/Quick Play)
     .on("postgres_changes", { 
       event: "UPDATE", 
@@ -597,6 +694,10 @@ function activateRound() {
   mpGuesses = [];
   mpGuessedSet.clear();
   mpPathChain = mpGameMode === "path" && mpPathStartIso3 ? [mpPathStartIso3] : [];
+
+  const oppList = document.getElementById("opponent-guess-list");
+  if (oppList) oppList.innerHTML = "";
+  
   clearMapColors();
   rotateToCountry(mpGameMode === "path" && mpPathStartIso3 ? mpPathStartIso3 : mpTargetIso3);
   document.getElementById("country-input").disabled = false;
@@ -863,6 +964,7 @@ function computeWinner(results) {
 
 function maybeShowMultiplayerResults() {
   if (!mpRoom || mpResults.length < 2) return;
+  revealOpponentGuesses();
   const isPathMode = (mpRoom.mode || mpGameMode) === "path";
   const unit = isPathMode ? "steps" : "guesses";
   const optimalPath = isPathMode ? getPathBFS(mpPathStartIso3, mpTargetIso3) : [];

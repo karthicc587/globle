@@ -53,8 +53,12 @@
         <button id="play-again-btn">Play Again</button>
       </div>
 
-      <h3 id="guess-section-title">Guesses</h3>
-      <div id="guess-list"></div>
+      <div class="guess-containers">
+  <div class="player-column">
+    <h3>Your Guesses</h3>
+    <div id="guess-list"></div>
+  </div>
+</div>
 
       <div class="setting-item">
         <label>
@@ -81,10 +85,26 @@
           <a href="?mode=path" id="link-path" class="mode-link">Path Mode</a>
         </div>
       </div>
-    </div> <div id="map-wrapper">
-      <svg id="map"></svg>
-      <div id="tooltip"></div>
-    </div>
+
+    </div> 
+    
+  <div id="race-track" class="race-track">
+  <div id="player-progress" class="progress-marker">You</div>
+  <div id="opponent-progress" class="progress-marker">Opponent</div>
+</div>
+
+<div id="map-wrapper">
+  <svg id="map"></svg>
+  
+  <div id="opponent-pip">
+    <div class="pip-label">Opponent's View</div>
+    <svg id="opponent-map"></svg>
+  </div>
+  
+  <div id="tooltip"></div>
+</div>
+
+
   </div> <script src="countries.js"></script>
   <script src="neighbors.js"></script>
   <script src="map.js"></script>

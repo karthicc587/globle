@@ -139,6 +139,11 @@ document.getElementById("borders-toggle").addEventListener("change", (e) => {
  * Updates the UI based on the current game mode and multiplayer status.
  * Handles the highlighed rectangle effect for mode selection.
  */
+/**
+ * Updates the UI based on the current game mode and multiplayer status.
+ * Handles the highlighted rectangle effect for mode selection and 
+ * visibility of multiplayer-specific elements.
+ */
 function applyModeUI(mode, multiplayerEnabled) {
   const modeLinkContainer = document.getElementById("mode-links");
   
@@ -154,15 +159,12 @@ function applyModeUI(mode, multiplayerEnabled) {
     if (pathLink) pathLink.href = `${base}&mode=path`;
 
     // 2. Handle the active highlight class
-    // Remove 'active' from all links first
     const links = modeLinkContainer.querySelectorAll(".mode-link");
     links.forEach(link => link.classList.remove("active"));
 
-    // Add 'active' to the link matching the current mode
     if (mode === "path") {
       pathLink?.classList.add("active");
     } else {
-      // Default to globle if mode is classic or anything else
       globleLink?.classList.add("active");
     }
   }
@@ -172,6 +174,18 @@ function applyModeUI(mode, multiplayerEnabled) {
   if (multiplayerPanel) {
     multiplayerPanel.style.display = multiplayerEnabled ? "block" : "none";
   }
+
+  // ─── NEW: Toggle Race Track and Mini-Map visibility ───
+  const raceTrack = document.getElementById("race-track");
+  const opponentPip = document.getElementById("opponent-pip");
+
+  if (raceTrack) {
+    raceTrack.style.display = multiplayerEnabled ? "block" : "none";
+  }
+  if (opponentPip) {
+    opponentPip.style.display = multiplayerEnabled ? "block" : "none";
+  }
+  // ──────────────────────────────────────────────────────
 
   // 4. Update the Section Title based on mode and MP status
   const guessSectionTitle = document.getElementById("guess-section-title");

@@ -173,6 +173,7 @@ const COUNTRY_DATA = {
   UZB: { name: "Uzbekistan",                 lat: 41.38,  lng: 64.59,  aliases: ["uzbekistan"] },
   VEN: { name: "Venezuela",                  lat: 6.42,   lng: -66.59, aliases: ["venezuela"] },
   VNM: { name: "Vietnam",                    lat: 14.06,  lng: 108.28, aliases: ["vietnam","viet nam"] },
+  XKX: { name: "Kosovo",                     lat: 42.60, lng: 20.90, aliases: ["kosovo", "kosova", "republic of kosovo"] },
   YEM: { name: "Yemen",                      lat: 15.55,  lng: 48.52,  aliases: ["yemen"] },
   ZMB: { name: "Zambia",                     lat: -13.13, lng: 27.85,  aliases: ["zambia","northern rhodesia"] },
   ZWE: { name: "Zimbabwe",                   lat: -19.02, lng: 29.15,  aliases: ["zimbabwe","rhodesia"] },

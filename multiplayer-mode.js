@@ -21,6 +21,8 @@ let mpGameMode = "globle";
 let mpIsCollaborative = false;
 let mpCurrentTurnId = null;
 let mpHasSuggestedThisTurn = false; 
+let mpMySelectedIso3 = null;
+let mpPartnerSelectedIso3 = null;
 
 function getSupabaseConfig() {
   return {
@@ -332,14 +334,19 @@ function bindMultiplayerUiEvents() {
 
   // Enable map-click guessing in multiplayer mode.
   window.addEventListener("mapCountryClick", (e) => {
-    if (!mpRoom || mpRoom.status !== "active" || mpRoundWon) return;
-    const clickedIso3 = e?.detail?.iso3;
-    if (!clickedIso3 || !COUNTRY_DATA[clickedIso3]) return;
+  if (!mpRoom || mpRoom.status !== "active" || mpRoundWon) return;
+  const clickedIso3 = e?.detail?.iso3;
+  if (!clickedIso3 || !COUNTRY_DATA[clickedIso3]) return;
+
+  if (mpIsCollaborative) {
+    selectCountryCollaborative(clickedIso3);
+  } else {
+    // Competitive behavior
     const input = document.getElementById("country-input");
-    if (!input || input.disabled) return;
     input.value = COUNTRY_DATA[clickedIso3].name;
     submitMultiplayerGuess();
-  });
+  }
+});
 
   // Make compass toggle immediately refresh current multiplayer guess rows.
   const compassToggle = document.getElementById("compass-toggle");
@@ -429,12 +436,13 @@ async function subscribeRoom(roomId) {
 
   mpChannel = mpClient.channel(`room:${roomId}`)
 
-    // multiplayer-mode.js inside subscribeRoom()
-    //listen for suggestion guess
-    .on("broadcast", { event: "suggestion" }, (payload) => {
+// listen for sync selection
+.on("broadcast", { event: "sync_selection" }, (payload) => {
     const { iso3, player_id } = payload.payload;
     if (player_id !== getMyPlayerId()) {
-        showSuggestionOnMap(iso3);
+        mpPartnerSelectedIso3 = iso3;
+        renderCollaborativeOutlines();
+        checkConsensus(iso3);
     }
 })
     //0. Listen for opponent guesses
@@ -447,6 +455,15 @@ async function subscribeRoom(roomId) {
     }, (payload) => {
       const newGuess = payload.new;
       if (mpIsCollaborative) {
+          mpMySelectedIso3 = null;
+          mpPartnerSelectedIso3 = null;
+          if (svgSel) svgSel.selectAll(".collab-ping").remove();
+          if (gSel) {
+            gSel.selectAll(".country")
+            .style("stroke", null)
+            .style("stroke-width", null)
+            .style("stroke-dasharray", null);
+           }
           const iso3 = newGuess.iso3;
     
     // ─── PATH MODE SYNC ───
@@ -850,8 +867,6 @@ async function submitMultiplayerGuess() {
   // COLLABORATIVE LOGIC
   if (mpIsCollaborative) {
     if (mpCurrentTurnId !== myId) {
-      // It's a suggestion!
-      sendSuggestion(iso3);
       input.value = "";
       return;
     }
@@ -1211,50 +1226,121 @@ async function handleMultiplayerPlayAgain() {
   location.reload();
 }
 
-function showSuggestionOnMap(iso3) {
-    const color = "#8b5cf6"; // Purple
-    gSel.selectAll(".country").filter(d => d.iso3 === iso3)
-      .transition().duration(200).style("fill", color)
-      .transition().duration(200).style("fill", "#334155")
-      .transition().duration(200).style("fill", color); // Quick double flash
-      
-    setMultiplayerStatus(`Partner suggests: ${COUNTRY_DATA[iso3].name}`);
+
+function selectCountryCollaborative(iso3) {
+  if (!mpIsCollaborative || mpRoundWon) return;
+
+  // 1. Path Mode Validation: Prevent selection of non-neighbors
+  if (mpGameMode === "path") {
+    const lastCountry = mpPathChain[mpPathChain.length - 1];
+    const neighbors = NEIGHBOR_DATA[lastCountry] || [];
+    if (iso3 !== lastCountry && !neighbors.includes(iso3)) {
+      setErrorMessage(`Selection must border ${COUNTRY_DATA[lastCountry].name}`);
+      return;
+    }
+  }
+
+  // 2. Update Local State
+  mpMySelectedIso3 = iso3;
+  renderCollaborativeOutlines();
+
+  // 3. Broadcast to Partner
+  mpChannel.send({
+    type: 'broadcast',
+    event: 'sync_selection',
+    payload: { iso3, player_id: getMyPlayerId() }
+  });
+
+  // 4. Check for Consensus
+  checkConsensus(iso3);
+}
+
+function renderCollaborativeOutlines() {
+  if (!svgSel) return;
+
+  // 1. Remove existing pings to redraw fresh ones
+  svgSel.selectAll(".collab-ping").remove();
+
+  const createPing = (iso3, color, className) => {
+    const country = COUNTRY_DATA[iso3];
+    if (!country) return;
+
+    svgSel.append("circle")
+      .datum({ lng: country.lng, lat: country.lat }) // Store geo-data on the element
+      .attr("class", `collab-ping ${className}`)
+      .attr("r", 7)
+      .style("fill", color)
+      .style("stroke", "white")
+      .style("stroke-width", 2)
+      .style("pointer-events", "none");
+  };
+
+  if (mpPartnerSelectedIso3) createPing(mpPartnerSelectedIso3, "#8b5cf6", "partner-ping");
+  if (mpMySelectedIso3) createPing(mpMySelectedIso3, "#10b981", "my-ping");
+
+  // Initial update of position
+  updatePingPositions();
+}
+
+function updatePingPositions() {
+  if (!svgSel || !projection) return;
+
+  svgSel.selectAll(".collab-ping").each(function(d) {
+    const geoPoint = [d.lng, d.lat];
+    
+    // Check if the coordinate is on the visible hemisphere
+    // d3.geoDistance calculates radians between the center of the view and the point
+    const rotation = projection.rotate();
+    const center = [-rotation[0], -rotation[1]];
+    const distance = d3.geoDistance(center, geoPoint);
+
+    if (distance > Math.PI / 2) {
+      // Hide if on the back side
+      d3.select(this).style("display", "none");
+    } else {
+      // Position and show
+      const coords = projection(geoPoint);
+      d3.select(this)
+        .style("display", "block")
+        .attr("cx", coords[0])
+        .attr("cy", coords[1]);
+    }
+  });
+}
+
+async function checkConsensus(iso3) {
+  if (mpMySelectedIso3 === mpPartnerSelectedIso3 && iso3 !== null) {
+    // Both agree!
+    const input = document.getElementById("country-input");
+    input.value = COUNTRY_DATA[iso3].name;
+    
+    // Clear selections before submitting to prevent double-triggers
+    const finalIso3 = iso3;
+    mpMySelectedIso3 = null;
+    mpPartnerSelectedIso3 = null;
+    renderCollaborativeOutlines();
+
+    // Submit the real guess
+    await submitMultiplayerGuess(finalIso3);
+  }
 }
 
 function updateCollabUI() {
-  const myId = getMyPlayerId();
   const raceTrack = document.getElementById("race-track");
   const opponentPip = document.getElementById("opponent-pip");
-  const statusEl = document.getElementById("mp-status");
 
   if (mpIsCollaborative) {
-    // 1. Turn off competitive UI
+    // 1. Hide competitive UI
     if (raceTrack) raceTrack.style.display = "none";
     if (opponentPip) opponentPip.style.display = "none";
 
-    if (mpCurrentTurnId === myId) {
-      statusEl.textContent = "🤝 Collaborative: YOUR TURN";
-      statusEl.style.color = "#10b981";
-      mpHasSuggestedThisTurn = false; // Reset lock when it becomes your turn
-    } else {
-      statusEl.textContent = "🤝 Collaborative: Partner's Turn (Type to suggest)";
-      statusEl.style.color = "#8b5cf6";
-    }
+    // 2. Clear status text so it doesn't show turn info
+    setMultiplayerStatus(""); 
   } else {
-    // Restore UI if mode switches back
+    // Restore UI if mode switches back to competitive
     if (raceTrack) raceTrack.style.display = "block";
     if (opponentPip) opponentPip.style.display = "block";
   }
-
-if (gSel) {
-    gSel.selectAll(".country")
-      .filter(function() { 
-        return d3.select(this).style("fill") === "rgb(139, 92, 246)"; // Check for #8b5cf6
-      })
-      .transition().duration(300)
-      .style("fill", null);
-  }
-
 }
 
 async function requestRematch() {
@@ -1294,22 +1380,6 @@ async function requestRematch() {
   } catch (error) {
     setMultiplayerStatus("Rematch failed: " + error.message, true);
   }
-}
-
-async function sendSuggestion(iso3) {
-  if (mpHasSuggestedThisTurn) {
-    setErrorMessage("You can only send one suggestion per turn.");
-    return;
-  }
-
-  mpChannel.send({
-    type: 'broadcast',
-    event: 'suggestion',
-    payload: { iso3, player_id: getMyPlayerId() }
-  });
-
-  mpHasSuggestedThisTurn = true; // Lock suggestions
-  setErrorMessage("Suggestion sent to partner!");
 }
 
 async function initMultiplayerMode(mode = "globle") {

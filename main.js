@@ -70,6 +70,15 @@ function setupSharedUIEvents() {
       listEl.appendChild(div);
     });
     listEl.classList.toggle("open", suggestions.length > 0);
+
+    const exactMatch = resolveCountry(input.value.trim());
+    if (exactMatch && getMultiplayerEnabled()) {
+        // Access selection logic if collab is active
+        if (typeof mpIsCollaborative !== 'undefined' && mpIsCollaborative) {
+            selectCountryCollaborative(exactMatch);
+        }
+    }
+
   });
 
   input.addEventListener("keydown", (e) => {

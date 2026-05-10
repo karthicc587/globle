@@ -175,6 +175,11 @@ function refreshMap() {
   if (!gSel) return;
   gSel.selectAll(".country").attr("d", pathFn);
   svgSel.selectAll(".sphere, .graticule").attr("d", pathFn);
+
+  // ADD THIS LINE:
+  if (typeof updatePingPositions === "function") {
+    updatePingPositions();
+  }
 }
 
 /**

@@ -130,6 +130,8 @@ function getPathModePair() {
 
 function renderPathMultiplayerMap(optimalPath = []) {
   if (!gSel) return;
+  
+  // 1. Reset map layers.
   gSel.selectAll(".country")
     .classed("guessed", false)
     .classed("target", false)
@@ -137,16 +139,20 @@ function renderPathMultiplayerMap(optimalPath = []) {
     .style("fill", null)
     .style("opacity", "1");
 
+  // 2. Render Optimal Path (Faint Red + Dashed Border).
   optimalPath.forEach(iso3 => {
     if (iso3 !== mpPathStartIso3 && iso3 !== mpTargetIso3) {
       const el = gSel.selectAll(".country").filter(d => d.iso3 === iso3);
-      el.classed("optimal-path", true);
+      el.classed("optimal-path", true); // Uses the dashed red border from CSS.
+      
+      // Only fill if it's not already part of the user's taken path.
       if (!mpPathChain.includes(iso3)) {
-        el.style("fill", "rgba(248, 113, 113, 0.2)");
+        el.style("fill", "rgba(248, 113, 113, 0.2)"); 
       }
     }
   });
 
+  // 3. Render Taken Path (Solid Blue).
   mpPathChain.forEach((iso3) => {
     if (iso3 !== mpPathStartIso3 && iso3 !== mpTargetIso3) {
       gSel.selectAll(".country").filter(d => d.iso3 === iso3)
@@ -155,11 +161,14 @@ function renderPathMultiplayerMap(optimalPath = []) {
     }
   });
 
+  // 4. Highlight the start and end points.
   if (mpPathStartIso3) {
-    gSel.selectAll(".country").filter(d => d.iso3 === mpPathStartIso3).style("fill", "#10b981");
+    gSel.selectAll(".country").filter(d => d.iso3 === mpPathStartIso3)
+      .style("fill", "#10b981"); // Green
   }
   if (mpTargetIso3) {
-    gSel.selectAll(".country").filter(d => d.iso3 === mpTargetIso3).style("fill", "#fbbf24");
+    gSel.selectAll(".country").filter(d => d.iso3 === mpTargetIso3)
+      .style("fill", "#fbbf24"); // Amber
   }
 }
 
@@ -438,36 +447,49 @@ async function subscribeRoom(roomId) {
     }, (payload) => {
       const newGuess = payload.new;
       if (mpIsCollaborative) {
-    // BOTH players update their main globe
-    const dist = newGuess.distance_km;
-    const iso3 = newGuess.iso3;
+          const iso3 = newGuess.iso3;
     
-    // Clear any lingering purple suggestions
-    gSel.selectAll(".country").filter(d => d.iso3 === iso3).style("fill", null);
-
-    gSel.selectAll(".country").filter(d => d.iso3 === iso3)
-      .classed("guessed", true)
-      .transition().duration(500)
-      .style("fill", distToColor(dist));
-      
-    rotateToCountry(iso3);
-    
-    // Refresh the local guess list to show the partner's move
-    if (newGuess.player_id !== getMyPlayerId()) {
-       // Optionally add to local mpGuesses array if not already there
-       if (!mpGuessedSet.has(iso3)) {
-         const country = COUNTRY_DATA[iso3];
-         mpGuesses.push({ 
-           iso3, 
-           name: country.name, 
-           dist, 
-           color: distToColor(dist), 
-           arrow: getBearingArrow(country.lat, country.lng, COUNTRY_DATA[mpTargetIso3].lat, COUNTRY_DATA[mpTargetIso3].lng) 
-         });
-         mpGuessedSet.add(iso3);
-         renderMultiplayerGuesses();
-       }
+    // ─── PATH MODE SYNC ───
+    if (mpGameMode === "path") {
+      // If the guess isn't already in our local chain (i.e., it was made by the partner)
+      if (!mpPathChain.includes(iso3)) {
+        mpPathChain.push(iso3);
+        mpGuessedSet.add(iso3); // Prevent duplicate error logic
+        
+        // Update visuals for the non-active player
+        renderPathMultiplayerMap();
+        renderMultiplayerGuesses(); 
+        rotateToCountry(iso3);
+      }
+    } else {
+      // ─── GLOBLE MODE SYNC ───
+      if (!mpGuessedSet.has(iso3)) {
+        const dist = newGuess.distance_km;
+        const country = COUNTRY_DATA[iso3];
+        mpGuesses.push({ 
+          iso3, 
+          name: country.name, 
+          dist, 
+          color: distToColor(dist), 
+          arrow: getBearingArrow(country.lat, country.lng, COUNTRY_DATA[mpTargetIso3].lat, COUNTRY_DATA[mpTargetIso3].lng) 
+        });
+        mpGuessedSet.add(iso3);
+        
+        gSel.selectAll(".country").filter(d => d.iso3 === iso3)
+          .classed("guessed", true)
+          .transition().duration(500)
+          .style("fill", distToColor(dist));
+          
+        renderMultiplayerGuesses();
+        rotateToCountry(iso3);
+      }
     }
+    
+    // Clear purple suggestions regardless of mode
+    gSel.selectAll(".country")
+      .filter(function() { return d3.select(this).style("fill") === "rgb(139, 92, 246)"; })
+      .style("fill", null);
+
   } else {
 
       updateRaceProgress(newGuess.player_id, newGuess.distance_km);
@@ -744,6 +766,8 @@ function activateRound() {
   mpGuesses = [];
   mpGuessedSet.clear();
   mpPathChain = mpGameMode === "path" && mpPathStartIso3 ? [mpPathStartIso3] : [];
+  mpGuessedSet.clear();
+  if (mpPathStartIso3) mpGuessedSet.add(mpPathStartIso3);
 
   const oppList = document.getElementById("opponent-guess-list");
   if (oppList) oppList.innerHTML = "";
@@ -1047,7 +1071,7 @@ function computeWinner(results) {
 }
 
 function maybeShowMultiplayerResults() {
-  // Guard clause: Collaborative needs at least 1 result, Competitive needs 2.
+  // Collaborative needs at least 1 result (shared), Competitive needs 2.
   const requiredResults = mpIsCollaborative ? 1 : 2;
   if (!mpRoom || mpResults.length < requiredResults) return;
 
@@ -1055,10 +1079,27 @@ function maybeShowMultiplayerResults() {
 
   const isPathMode = (mpRoom.mode || mpGameMode) === "path";
   const unit = isPathMode ? "steps" : "guesses";
+  
+  // Calculate optimal path for the reveal.
   const optimalPath = isPathMode ? getPathBFS(mpPathStartIso3, mpTargetIso3) : [];
   const optimalLine = isPathMode && optimalPath.length > 0
     ? `<small>(Shortest possible was ${Math.max(optimalPath.length - 1, 0)} steps)</small><br>`
     : "";
+
+  // ─── SYNCED VISUAL REVEAL ───
+  if (isPathMode) {
+    // Both players render the final map state with the optimal path overlay.
+    renderPathMultiplayerMap(optimalPath);
+    rotateToCountry(mpTargetIso3);
+  } else if (mpIsCollaborative) {
+    // Globle: Reveal target in the winning color.
+    const winningRed = distToColor(0);
+    gSel.selectAll(".country").filter(d => d.iso3 === mpTargetIso3)
+      .classed("guessed", true)
+      .transition().duration(500)
+      .style("fill", winningRed);
+    rotateToCountry(mpTargetIso3);
+  }
 
   const winMsg = document.getElementById("win-message");
   const winText = document.getElementById("win-text");
@@ -1067,7 +1108,6 @@ function maybeShowMultiplayerResults() {
   if (!winMsg || !winText) return;
   winMsg.style.display = "block";
 
-  // Handle Rematch Button
   if (rematchBtn) {
     rematchBtn.style.display = "block";
     rematchBtn.onclick = requestRematch;
@@ -1075,7 +1115,7 @@ function maybeShowMultiplayerResults() {
 
   if (mpIsCollaborative) {
     // ─── COLLABORATIVE UI ───
-    const res = mpResults[0]; // Both players share the same result data
+    const res = mpResults[0]; 
     const status = res.won ? "🎉 Team Victory!" : "😢 Team Gave Up";
     
     winText.innerHTML = `
@@ -1085,14 +1125,12 @@ function maybeShowMultiplayerResults() {
       ${optimalLine}
     `;
     setMultiplayerStatus("Collaboration complete!");
-
   } else {
     // ─── COMPETITIVE UI ───
     const winner = computeWinner(mpResults);
     const myId = getMyPlayerId();
     const [a, b] = mpResults;
     const findName = (id) => mpPlayers.find(p => p.player_id === id)?.display_name || "Player";
-
     const verdict = winner ? (winner === myId ? "You win!" : "You lose.") : "Tie game.";
 
     winText.innerHTML = `
